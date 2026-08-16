@@ -220,38 +220,6 @@ export function getGoogleMapsUrl(originLat, originLng, destLat, destLng, mode = 
 }
 
 /**
- * Generates direct Jakdojade routing URL for Poland.
- * Uses exact verified /city/Start/Cel?fc=...&tc=...&d=...&h=... pattern which triggers
- * instantaneous automated timetable & route computation in Jakdojade!
- * @param {number|null} originLat
- * @param {number|null} originLng
- * @param {number} destLat
- * @param {number} destLng
- * @param {string} citySlug
- * @returns {string}
- */
-export function getJakdojadeUrl(originLat, originLng, destLat, destLng, citySlug = 'krakow') {
-  const slug = (citySlug || 'krakow').toLowerCase().replace(/[\s_]+/g, '-');
-  const dLat = destLat.toFixed(5);
-  const dLng = destLng.toFixed(5);
-  
-  const now = new Date();
-  const dateStr = String(now.getDate()).padStart(2, '0') + '.' +
-                  String(now.getMonth() + 1).padStart(2, '0') + '.' +
-                  String(now.getFullYear()).slice(-2);
-  const timeStr = String(now.getHours()).padStart(2, '0') + ':' +
-                  String(now.getMinutes()).padStart(2, '0');
-
-  if (originLat !== null && originLng !== null) {
-    const oLat = originLat.toFixed(5);
-    const oLng = originLng.toFixed(5);
-    return `https://jakdojade.pl/${slug}/Start/Cel?fc=${oLat}:${oLng}&tc=${dLat}:${dLng}&fn=Start&tn=Cel&t=1&d=${dateStr}&h=${timeStr}`;
-  }
-  
-  return `https://jakdojade.pl/${slug}/Start/Cel?tc=${dLat}:${dLng}&tn=Cel&t=1&d=${dateStr}&h=${timeStr}`;
-}
-
-/**
  * Generates Apple Maps URL
  * @param {number} destLat
  * @param {number} destLng

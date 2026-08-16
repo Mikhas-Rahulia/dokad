@@ -6,7 +6,6 @@ import {
   formatDistance,
   getTravelMode,
   getGoogleMapsUrl,
-  getJakdojadeUrl,
   getAppleMapsUrl,
   getYandexMapsUrl
 } from '../geo/geometry.js';
@@ -60,9 +59,6 @@ export class AppUI {
     this.btnRoutePrimary = document.getElementById('btn-route-primary');
     this.routeIcon = document.getElementById('route-icon');
     this.routeText = document.getElementById('route-text');
-    this.btnRouteJakdojade = document.getElementById('btn-route-jakdojade');
-    this.jakdojadeText = document.getElementById('jakdojade-text');
-    this.btnRouteImka = document.getElementById('btn-route-imka');
     this.btnCopyCoords = document.getElementById('btn-copy-coords');
     this.copyText = document.getElementById('copy-text');
     this.btnAppleMaps = document.getElementById('btn-apple-maps');
@@ -217,7 +213,6 @@ export class AppUI {
     this.copyText.textContent = t('copyCoords', lang);
     this.simulateLabel.textContent = t('simulateCenterToggle', lang);
     this.boundaryBadge.textContent = `🛡️ ${t('boundaryInfo', lang)}`;
-    this.jakdojadeText.textContent = t('routeButtonJakdojade', lang);
 
     // Render city selector grid
     this.renderCityGrid();
@@ -351,42 +346,6 @@ export class AppUI {
       mode
     );
     this.btnRoutePrimary.href = googleUrl;
-
-    // Check Jakdojade for Poland: ONLY visible when city is in Poland
-    const isPoland = this.currentCity.countryCode === 'PL' || this.currentLang === 'pl' || (this.currentCity.name && this.currentCity.name.toLowerCase().includes('krak'));
-    if (isPoland) {
-      this.btnRouteJakdojade.style.display = 'flex';
-      let jakdojadeSlug = 'krakow';
-      if (this.currentCity.name) {
-        const n = this.currentCity.name.toLowerCase();
-        if (n.includes('krak')) jakdojadeSlug = 'krakow';
-        else if (n.includes('warsz') || n.includes('warsaw')) jakdojadeSlug = 'warszawa';
-        else if (n.includes('wroc')) jakdojadeSlug = 'wroclaw';
-        else if (n.includes('pozn')) jakdojadeSlug = 'poznan';
-        else if (n.includes('gdan') || n.includes('gdyn') || n.includes('sopot')) jakdojadeSlug = 'trojmiasto';
-        else if (n.includes('lodz') || n.includes('łódź')) jakdojadeSlug = 'lodz';
-        else if (n.includes('szczecin')) jakdojadeSlug = 'szczecin';
-        else if (n.includes('katow') || n.includes('silesia')) jakdojadeSlug = 'slask';
-        else jakdojadeSlug = n.replace(/[\s_]+/g, '-');
-      }
-      
-      this.btnRouteJakdojade.href = getJakdojadeUrl(
-        origin ? origin.lat : null,
-        origin ? origin.lng : null,
-        point.lat,
-        point.lng,
-        jakdojadeSlug
-      );
-
-      // Show iMKA for Małopolska / Kraków
-      const isKrakow = this.currentCity.name.toLowerCase().includes('krak') || this.currentCity.id === 'krakow';
-      if (this.btnRouteImka) {
-        this.btnRouteImka.style.display = isKrakow ? 'flex' : 'none';
-      }
-    } else {
-      this.btnRouteJakdojade.style.display = 'none';
-      if (this.btnRouteImka) this.btnRouteImka.style.display = 'none';
-    }
 
     // Apple Maps button is universal
     this.btnAppleMaps.href = getAppleMapsUrl(point.lat, point.lng, mode);

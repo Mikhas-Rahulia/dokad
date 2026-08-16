@@ -358,22 +358,6 @@ html, body {
   color: #082f49;
 }
 
-.pixel-btn-jakdojade {
-  width: 100%;
-  height: 44px;
-  font-size: 0.9rem;
-  background: #f97316;
-  color: #ffffff;
-}
-
-.pixel-btn-imka {
-  width: 100%;
-  height: 40px;
-  font-size: 0.85rem;
-  background: #8b5cf6;
-  color: #ffffff;
-}
-
 /* Secondary Actions */
 .secondary-actions {
   display: flex;
