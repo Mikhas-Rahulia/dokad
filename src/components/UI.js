@@ -334,7 +334,7 @@ export class AppUI {
       ? t('distanceUnder5kmBadge', this.currentLang)
       : t('distanceOver5kmBadge', this.currentLang);
 
-    // Update Primary Route Button (Walking vs Public Transit)
+    // Update Primary Route Button (Walking vs Public Transit in Google Maps)
     this.btnRoutePrimary.className = `pixel-btn pixel-btn-main-route ${mode}`;
     this.routeIcon.textContent = isWalking ? '🚶' : '🚌';
     this.routeText.textContent = isWalking
@@ -351,11 +351,24 @@ export class AppUI {
     );
     this.btnRoutePrimary.href = googleUrl;
 
-    // Check Jakdojade for Poland
-    const isPoland = this.currentCity.countryCode === 'PL' || this.currentLang === 'pl';
+    // Check Jakdojade for Poland: ONLY visible when city is in Poland
+    const isPoland = this.currentCity.countryCode === 'PL' || this.currentLang === 'pl' || (this.currentCity.name && this.currentCity.name.toLowerCase().includes('krak'));
     if (isPoland) {
       this.btnRouteJakdojade.style.display = 'flex';
-      const jakdojadeSlug = this.currentCity.name.toLowerCase().includes('krak') ? 'krakow' : (this.currentCity.name.toLowerCase() || 'krakow');
+      let jakdojadeSlug = 'krakow';
+      if (this.currentCity.name) {
+        const n = this.currentCity.name.toLowerCase();
+        if (n.includes('krak')) jakdojadeSlug = 'krakow';
+        else if (n.includes('warsz') || n.includes('warsaw')) jakdojadeSlug = 'warszawa';
+        else if (n.includes('wroc')) jakdojadeSlug = 'wroclaw';
+        else if (n.includes('pozn')) jakdojadeSlug = 'poznan';
+        else if (n.includes('gdan') || n.includes('gdyn') || n.includes('sopot')) jakdojadeSlug = 'trojmiasto';
+        else if (n.includes('lodz') || n.includes('łódź')) jakdojadeSlug = 'lodz';
+        else if (n.includes('szczecin')) jakdojadeSlug = 'szczecin';
+        else if (n.includes('katow') || n.includes('silesia')) jakdojadeSlug = 'slask';
+        else jakdojadeSlug = n.replace(/[\s_]+/g, '-');
+      }
+      
       this.btnRouteJakdojade.href = getJakdojadeUrl(
         origin ? origin.lat : null,
         origin ? origin.lng : null,
@@ -367,14 +380,27 @@ export class AppUI {
       this.btnRouteJakdojade.style.display = 'none';
     }
 
+    // Apple Maps button is universal
     this.btnAppleMaps.href = getAppleMapsUrl(point.lat, point.lng, mode);
-    this.btnYandexMaps.href = getYandexMapsUrl(
-      origin ? origin.lat : null,
-      origin ? origin.lng : null,
-      point.lat,
-      point.lng,
-      mode
-    );
+
+    // Yandex Maps button: ONLY for Belarus (BY) and Russia (RU)
+    const isYandexTerritory = this.currentCity.countryCode === 'BY' || 
+                              this.currentCity.countryCode === 'RU' ||
+                              this.currentCity.id === 'moscow' ||
+                              this.currentCity.id === 'grodno';
+
+    if (isYandexTerritory) {
+      this.btnYandexMaps.style.display = 'inline-flex';
+      this.btnYandexMaps.href = getYandexMapsUrl(
+        origin ? origin.lat : null,
+        origin ? origin.lng : null,
+        point.lat,
+        point.lng,
+        mode
+      );
+    } else {
+      this.btnYandexMaps.style.display = 'none';
+    }
   }
 
   getEffectiveOrigin() {
