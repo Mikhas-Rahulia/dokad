@@ -6,6 +6,7 @@ import {
   formatDistance,
   getTravelMode,
   getGoogleMapsUrl,
+  getJakdojadeUrl,
   getAppleMapsUrl,
   getYandexMapsUrl
 } from '../geo/geometry.js';
@@ -59,6 +60,8 @@ export class AppUI {
     this.btnRoutePrimary = document.getElementById('btn-route-primary');
     this.routeIcon = document.getElementById('route-icon');
     this.routeText = document.getElementById('route-text');
+    this.btnRouteJakdojade = document.getElementById('btn-route-jakdojade');
+    this.jakdojadeText = document.getElementById('jakdojade-text');
     this.btnCopyCoords = document.getElementById('btn-copy-coords');
     this.copyText = document.getElementById('copy-text');
     this.btnAppleMaps = document.getElementById('btn-apple-maps');
@@ -121,7 +124,7 @@ export class AppUI {
     this.toggleSimulateCenter.addEventListener('change', (e) => {
       this.simulateCenter = e.target.checked;
       this.cityService.setSimulateCenterMode(this.simulateCenter);
-      this.showToast(this.simulateCenter ? '📍 Tryb testowy: start w centrum miasta' : '🎯 GPS aktywny');
+      this.showToast(this.simulateCenter ? '📍 START: CENTRUM MIASTA' : '🎯 GPS AKTYWNY');
       if (this.currentDestination) {
         this.updateDestinationDistances();
       }
@@ -139,7 +142,7 @@ export class AppUI {
 
   initGeolocation() {
     if (!navigator.geolocation) {
-      this.gpsStatusIndicator.textContent = '● GPS brak';
+      this.gpsStatusIndicator.textContent = '● GPS BRAK';
       this.gpsStatusIndicator.style.color = 'var(--text-muted)';
       return;
     }
@@ -152,11 +155,11 @@ export class AppUI {
         };
         this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng);
         this.gpsStatusIndicator.textContent = '● GPS OK';
-        this.gpsStatusIndicator.style.color = 'var(--accent-walking)';
+        this.gpsStatusIndicator.style.color = 'var(--pixel-green)';
       },
       (err) => {
         console.warn('Geolocation denied/error:', err.message);
-        this.gpsStatusIndicator.textContent = '● GPS off';
+        this.gpsStatusIndicator.textContent = '● GPS OFF';
         this.gpsStatusIndicator.style.color = 'var(--text-muted)';
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -213,6 +216,7 @@ export class AppUI {
     this.copyText.textContent = t('copyCoords', lang);
     this.simulateLabel.textContent = t('simulateCenterToggle', lang);
     this.boundaryBadge.textContent = `🛡️ ${t('boundaryInfo', lang)}`;
+    this.jakdojadeText.textContent = t('routeButtonJakdojade', lang);
 
     // Render city selector grid
     this.renderCityGrid();
@@ -243,17 +247,17 @@ export class AppUI {
     if (!query) return;
 
     this.searchStatusMsg.style.display = 'block';
-    this.searchStatusMsg.textContent = '🔍 Szukanie granic miasta w OpenStreetMap...';
+    this.searchStatusMsg.textContent = '🔍 SZUKANIE W OPENSTREETMAP...';
 
     try {
       const city = await this.cityService.searchAndFetchCity(query);
       this.searchStatusMsg.style.display = 'none';
       this.citySearchInput.value = '';
       this.selectCity(city);
-      this.showToast(`✨ ${city.nativeName} dodano!`);
+      this.showToast(`✨ ${city.nativeName} DODANO!`);
     } catch (err) {
       this.searchStatusMsg.style.display = 'block';
-      this.searchStatusMsg.textContent = `❌ ${err.message || 'Nie znaleziono miasta'}`;
+      this.searchStatusMsg.textContent = `❌ ${err.message || 'NIE ZNALEZIONO'}`;
     }
   }
 
@@ -262,7 +266,7 @@ export class AppUI {
    */
   async rollRandomSpot() {
     if (!this.currentCity || !this.currentCity.geojson) {
-      this.showToast('Błąd: brak granic miasta');
+      this.showToast('BŁĄD: BRAK GRANIC');
       return;
     }
 
@@ -270,7 +274,7 @@ export class AppUI {
     this.btnRollMain.classList.add('rolling');
     this.btnRollText.textContent = t('rolling', this.currentLang);
     if ('vibrate' in navigator) {
-      navigator.vibrate([20, 40, 20]);
+      navigator.vibrate([25, 40, 25]);
     }
 
     // Heavy client-side Point-In-Polygon calculation
@@ -280,7 +284,7 @@ export class AppUI {
     // Place marker on map with flight animation
     this.map.setTargetPoint(point.lat, point.lng, `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`);
 
-    // Confetti celebration burst
+    // Pixel Confetti celebration burst
     this.triggerConfetti();
 
     // Update Distance and Routing UI
@@ -293,14 +297,14 @@ export class AppUI {
 
     // Asynchronously reverse geocode address
     this.cityService.reverseGeocode(point.lat, point.lng, this.currentLang).then(address => {
-      this.destinationAddress.textContent = address;
+      this.destinationAddress.textContent = address.toUpperCase();
     });
 
     // Reset button state
     setTimeout(() => {
       this.btnRollMain.classList.remove('rolling');
       this.btnRollText.textContent = t('rollButton', this.currentLang);
-    }, 450);
+    }, 400);
   }
 
   updateDestinationDistances() {
@@ -325,19 +329,19 @@ export class AppUI {
 
     // Update Distance badge (<5km walking vs >=5km transit)
     this.distValue.textContent = formatDistance(distKm, this.currentLang);
-    this.distBadge.className = `distance-badge ${mode}`;
+    this.distBadge.className = `pixel-badge ${mode}`;
     this.distBadge.textContent = isWalking
       ? t('distanceUnder5kmBadge', this.currentLang)
       : t('distanceOver5kmBadge', this.currentLang);
 
     // Update Primary Route Button (Walking vs Public Transit)
-    this.btnRoutePrimary.className = `btn-nav-primary ${mode}`;
+    this.btnRoutePrimary.className = `pixel-btn pixel-btn-main-route ${mode}`;
     this.routeIcon.textContent = isWalking ? '🚶' : '🚌';
     this.routeText.textContent = isWalking
       ? t('routeButtonWalking', this.currentLang)
       : t('routeButtonTransit', this.currentLang);
 
-    // Set URLs
+    // Set Google Maps URL
     const googleUrl = getGoogleMapsUrl(
       origin ? origin.lat : null,
       origin ? origin.lng : null,
@@ -346,6 +350,22 @@ export class AppUI {
       mode
     );
     this.btnRoutePrimary.href = googleUrl;
+
+    // Check Jakdojade for Poland
+    const isPoland = this.currentCity.countryCode === 'PL' || this.currentLang === 'pl';
+    if (isPoland) {
+      this.btnRouteJakdojade.style.display = 'flex';
+      const jakdojadeSlug = this.currentCity.name.toLowerCase().includes('krak') ? 'krakow' : (this.currentCity.name.toLowerCase() || 'krakow');
+      this.btnRouteJakdojade.href = getJakdojadeUrl(
+        origin ? origin.lat : null,
+        origin ? origin.lng : null,
+        point.lat,
+        point.lng,
+        jakdojadeSlug
+      );
+    } else {
+      this.btnRouteJakdojade.style.display = 'none';
+    }
 
     this.btnAppleMaps.href = getAppleMapsUrl(point.lat, point.lng, mode);
     this.btnYandexMaps.href = getYandexMapsUrl(
@@ -369,7 +389,7 @@ export class AppUI {
     if (!this.currentDestination) return;
     const text = `${this.currentDestination.lat.toFixed(6)}, ${this.currentDestination.lng.toFixed(6)}`;
     navigator.clipboard.writeText(text).then(() => {
-      this.showToast(`📋 ${t('coordsCopied', this.currentLang)}: ${text}`);
+      this.showToast(`📋 ${t('coordsCopied', this.currentLang)}`);
       if ('vibrate' in navigator) navigator.vibrate(15);
     });
   }
@@ -377,10 +397,10 @@ export class AppUI {
   triggerConfetti() {
     try {
       confetti({
-        particleCount: 40,
-        spread: 60,
+        particleCount: 30,
+        spread: 50,
         origin: { y: 0.85 },
-        colors: ['#4f46e5', '#10b981', '#38bdf8', '#f59e0b']
+        colors: ['#facc15', '#22c55e', '#0ea5e9', '#ef4444']
       });
     } catch {}
   }
@@ -390,7 +410,7 @@ export class AppUI {
     this.toast.classList.add('show');
     setTimeout(() => {
       this.toast.classList.remove('show');
-    }, 2800);
+    }, 2400);
   }
 
   toggleTheme() {
@@ -432,7 +452,7 @@ export class AppUI {
     window.addEventListener('appinstalled', () => {
       this.btnInstallPWA.style.display = 'none';
       this.deferredInstallPrompt = null;
-      this.showToast('🎉 ' + t('offlineReady', this.currentLang));
+      this.showToast('🎉 PWA ZAINSTALOWANE');
     });
   }
 

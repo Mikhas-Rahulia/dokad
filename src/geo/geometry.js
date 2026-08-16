@@ -128,7 +128,7 @@ export function getRandomPointInCity(geojson, maxAttempts = 2000) {
     }
   }
 
-  // Fallback: Return center if sampling fails (highly unlikely)
+  // Fallback: Return center if sampling fails
   return {
     lat: (minLat + maxLat) / 2,
     lng: (minLng + maxLng) / 2
@@ -217,6 +217,23 @@ export function getGoogleMapsUrl(originLat, originLng, destLat, destLng, mode = 
     return `https://www.google.com/maps/dir/?api=1&origin=${originLat.toFixed(6)},${originLng.toFixed(6)}&destination=${destLat.toFixed(6)},${destLng.toFixed(6)}&travelmode=${travelParam}`;
   }
   return `https://www.google.com/maps/dir/?api=1&destination=${destLat.toFixed(6)},${destLng.toFixed(6)}&travelmode=${travelParam}`;
+}
+
+/**
+ * Generates Jakdojade routing URL for Poland.
+ * @param {number|null} originLat
+ * @param {number|null} originLng
+ * @param {number} destLat
+ * @param {number} destLng
+ * @param {string} citySlug
+ * @returns {string}
+ */
+export function getJakdojadeUrl(originLat, originLng, destLat, destLng, citySlug = 'krakow') {
+  const slug = (citySlug || 'krakow').toLowerCase().replace(/[\s_]+/g, '-');
+  if (originLat !== null && originLng !== null) {
+    return `https://jakdojade.pl/${slug}/trasa/?fc=${originLat.toFixed(5)}:${originLng.toFixed(5)}&tc=${destLat.toFixed(5)}:${destLng.toFixed(5)}`;
+  }
+  return `https://jakdojade.pl/${slug}/trasa/?tc=${destLat.toFixed(5)}:${destLng.toFixed(5)}`;
 }
 
 /**
