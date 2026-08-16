@@ -221,8 +221,8 @@ export function getGoogleMapsUrl(originLat, originLng, destLat, destLng, mode = 
 
 /**
  * Generates direct Jakdojade routing URL for Poland.
- * Uses query format `?fc=lat:lng&tc=lat:lng` with coordinate indicators so Jakdojade
- * immediately starts route calculation upon opening.
+ * Uses exact verified /city/Start/Cel?fc=...&tc=...&d=...&h=... pattern which triggers
+ * instantaneous automated timetable & route computation in Jakdojade!
  * @param {number|null} originLat
  * @param {number|null} originLng
  * @param {number} destLat
@@ -235,13 +235,20 @@ export function getJakdojadeUrl(originLat, originLng, destLat, destLng, citySlug
   const dLat = destLat.toFixed(5);
   const dLng = destLng.toFixed(5);
   
+  const now = new Date();
+  const dateStr = String(now.getDate()).padStart(2, '0') + '.' +
+                  String(now.getMonth() + 1).padStart(2, '0') + '.' +
+                  String(now.getFullYear()).slice(-2);
+  const timeStr = String(now.getHours()).padStart(2, '0') + ':' +
+                  String(now.getMinutes()).padStart(2, '0');
+
   if (originLat !== null && originLng !== null) {
     const oLat = originLat.toFixed(5);
     const oLng = originLng.toFixed(5);
-    return `https://jakdojade.pl/${slug}/trasa?fc=${oLat}:${oLng}&tc=${dLat}:${dLng}&ft=LOCATION_TYPE_COORDINATE&tt=LOCATION_TYPE_COORDINATE&fn=Start&tn=Cel&t=1`;
+    return `https://jakdojade.pl/${slug}/Start/Cel?fc=${oLat}:${oLng}&tc=${dLat}:${dLng}&fn=Start&tn=Cel&t=1&d=${dateStr}&h=${timeStr}`;
   }
   
-  return `https://jakdojade.pl/${slug}/trasa?tc=${dLat}:${dLng}&tt=LOCATION_TYPE_COORDINATE&tn=Cel&t=1`;
+  return `https://jakdojade.pl/${slug}/Start/Cel?tc=${dLat}:${dLng}&tn=Cel&t=1&d=${dateStr}&h=${timeStr}`;
 }
 
 /**

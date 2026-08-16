@@ -62,6 +62,7 @@ export class AppUI {
     this.routeText = document.getElementById('route-text');
     this.btnRouteJakdojade = document.getElementById('btn-route-jakdojade');
     this.jakdojadeText = document.getElementById('jakdojade-text');
+    this.btnRouteImka = document.getElementById('btn-route-imka');
     this.btnCopyCoords = document.getElementById('btn-copy-coords');
     this.copyText = document.getElementById('copy-text');
     this.btnAppleMaps = document.getElementById('btn-apple-maps');
@@ -376,8 +377,15 @@ export class AppUI {
         point.lng,
         jakdojadeSlug
       );
+
+      // Show iMKA for Małopolska / Kraków
+      const isKrakow = this.currentCity.name.toLowerCase().includes('krak') || this.currentCity.id === 'krakow';
+      if (this.btnRouteImka) {
+        this.btnRouteImka.style.display = isKrakow ? 'flex' : 'none';
+      }
     } else {
       this.btnRouteJakdojade.style.display = 'none';
+      if (this.btnRouteImka) this.btnRouteImka.style.display = 'none';
     }
 
     // Apple Maps button is universal
