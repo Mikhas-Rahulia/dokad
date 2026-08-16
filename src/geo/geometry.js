@@ -220,9 +220,9 @@ export function getGoogleMapsUrl(originLat, originLng, destLat, destLng, mode = 
 }
 
 /**
- * Generates full auto-routing Jakdojade URL for Poland.
- * Uses exact /z--Start--do--Cel path + coordinate parameters so that
- * Jakdojade immediately calculates the route upon opening in app/browser!
+ * Generates direct Jakdojade routing URL for Poland.
+ * Uses query format `?fc=lat:lng&tc=lat:lng` with coordinate indicators so Jakdojade
+ * immediately starts route calculation upon opening.
  * @param {number|null} originLat
  * @param {number|null} originLng
  * @param {number} destLat
@@ -238,10 +238,10 @@ export function getJakdojadeUrl(originLat, originLng, destLat, destLng, citySlug
   if (originLat !== null && originLng !== null) {
     const oLat = originLat.toFixed(5);
     const oLng = originLng.toFixed(5);
-    return `https://jakdojade.pl/${slug}/trasa/z--Moja-Lokalizacja--do--Cel?fc=${oLat}:${oLng}&tc=${dLat}:${dLng}&ft=LOCATION_TYPE_COORDINATE&tt=LOCATION_TYPE_COORDINATE&fn=Moja%20Lokalizacja&tn=Cel&t=1`;
+    return `https://jakdojade.pl/${slug}/trasa?fc=${oLat}:${oLng}&tc=${dLat}:${dLng}&ft=LOCATION_TYPE_COORDINATE&tt=LOCATION_TYPE_COORDINATE&fn=Start&tn=Cel&t=1`;
   }
   
-  return `https://jakdojade.pl/${slug}/trasa/z--Start--do--Cel?tc=${dLat}:${dLng}&tt=LOCATION_TYPE_COORDINATE&tn=Cel&t=1`;
+  return `https://jakdojade.pl/${slug}/trasa?tc=${dLat}:${dLng}&tt=LOCATION_TYPE_COORDINATE&tn=Cel&t=1`;
 }
 
 /**
