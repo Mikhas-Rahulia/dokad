@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Dokąd? — Losowe punkty w granicach miasta</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="Eksploruj losowe zakątki w ścisłych granicach miast. Kraków, Москва, Гродна, Delft, Dania Beach z automatyczną trasą Google Maps." />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Dokąd?" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  
+  <script type="module" crossorigin src="./assets/index-BdgGFmcH.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BkhtnIc8.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Top Floating Navigation -->
+    <header class="top-header">
+      <button id="btn-select-city" class="brand-badge" aria-label="Wybierz miasto">
+        <span class="brand-logo-icon">📍</span>
+        <span class="brand-text"><span id="header-city-flag">🇵🇱</span> <span id="header-city-name" class="brand-city-name">Kraków</span></span>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">▾</span>
+      </button>
+
+      <div class="header-actions">
+        <button id="btn-theme-toggle" class="icon-btn" title="Przełącz motyw" aria-label="Przełącz motyw">
+          <span id="theme-icon">🌙</span>
+        </button>
+        <button id="btn-info" class="icon-btn" title="Informacje" aria-label="Informacje">
+          <span>ℹ️</span>
+        </button>
+        <button id="btn-install-pwa" class="icon-btn" title="Zainstaluj aplikację" aria-label="Zainstaluj PWA" style="display: none;">
+          <span>📲</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Floating Map Controls -->
+    <div class="map-floating-controls">
+      <button id="btn-locate-me" class="icon-btn" title="Moja lokalizacja" aria-label="Moja lokalizacja">
+        <span>🎯</span>
+      </button>
+      <button id="btn-recenter-city" class="icon-btn" title="Centruj na mieście" aria-label="Centruj na mieście">
+        <span>🗺️</span>
+      </button>
+    </div>
+
+    <!-- Bottom Action Drawer (Thumb Zone) -->
+    <div class="bottom-sheet">
+      <div class="bottom-sheet-content">
+        
+        <!-- Destination Card (Hidden until point is rolled) -->
+        <div id="result-card" class="result-card" style="display: none;">
+          <div class="result-header">
+            <div class="result-title-group">
+              <div class="result-badge-container">
+                <span id="dist-badge" class="distance-badge walking">🚶 Krótki dystans</span>
+                <span id="boundary-badge" style="font-size: 0.7rem; color: var(--text-muted);">🛡️ W granicach miasta</span>
+              </div>
+              <h2 id="destination-address" class="result-address">Pobieranie adresu...</h2>
+              <div class="result-coords" id="destination-coords">50.0647, 19.9450</div>
+            </div>
+          </div>
+
+          <div class="result-distance-row">
+            <span id="dist-label" class="result-distance-label">Odległość od Ciebie:</span>
+            <span id="dist-value" class="result-distance-value">2.4 km</span>
+          </div>
+
+          <!-- Smart Route Button (Walk <5km vs Transit >=5km) -->
+          <a id="btn-route-primary" href="#" target="_blank" rel="noopener noreferrer" class="btn-nav-primary walking">
+            <span id="route-icon">🚶</span>
+            <span id="route-text">Trasa piesza w Google Maps</span>
+          </a>
+
+          <!-- Secondary Actions -->
+          <div class="secondary-actions">
+            <button id="btn-copy-coords" class="btn-secondary-action" title="Kopiuj współrzędne">
+              <span>📋</span> <span id="copy-text">Kopiuj</span>
+            </button>
+            <a id="btn-apple-maps" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary-action" title="Apple Maps">
+              <span>🍏</span> <span>Apple Maps</span>
+            </a>
+            <a id="btn-yandex-maps" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary-action" title="Yandex Maps">
+              <span>🟡</span> <span>Yandex</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Primary Roll Button -->
+        <button id="btn-roll-main" class="btn-roll-main">
+          <span class="dice-icon">🎲</span>
+          <span id="btn-roll-text">Wylosuj punkt docelowy</span>
+        </button>
+
+        <!-- Simulation / Testing helper toggle -->
+        <div class="simulation-bar">
+          <label class="simulation-toggle-label" for="toggle-simulate-center">
+            <input type="checkbox" id="toggle-simulate-center" class="simulation-toggle-input" />
+            <span id="simulate-label">Licz od centrum miasta (tryb testowy)</span>
+          </label>
+          <span id="gps-status-indicator" style="font-size: 0.72rem; color: var(--accent-walking);">● GPS</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- City Selection Modal -->
+    <div id="modal-city" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="city-modal-title" class="modal-title">Wskaż miasto w jego ojczystym języku</h3>
+          <p id="city-modal-subtitle" class="modal-subtitle">Wybierz gotowe miasto lub wpisz dowolne inne:</p>
+          <button id="modal-city-close" class="modal-close-btn" aria-label="Zamknij">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="city-search-box">
+            <input type="text" id="city-search-input" class="city-search-input" placeholder="Wpisz miasto..." />
+            <button id="city-search-btn" class="city-search-btn">Szukaj</button>
+          </div>
+
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;" id="featured-cities-label">
+            Dostępne miasta:
+          </div>
+
+          <div id="featured-cities-grid" class="city-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div id="search-status-msg" style="display: none; font-size: 0.85rem; color: var(--text-secondary); text-align: center; padding: 8px;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info / About Modal -->
+    <div id="modal-info" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Dokąd? / Куда? / Where to?</h3>
+          <p class="modal-subtitle">Progressive Web App do eksploracji miast</p>
+          <button id="modal-info-close" class="modal-close-btn" aria-label="Zamknij">✕</button>
+        </div>
+        <div class="modal-body" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary);">
+          <p><strong>🎯 Ścisłe granice miasta:</strong> Punkty są losowane za pomocą algorytmu Ray-Casting Point-in-Polygon ściśle w obrębie granic administracyjnych.</p>
+          <div style="height: 8px;"></div>
+          <p><strong>🌐 Język kraju:</strong> Po wybraniu miasta cały interfejs natychmiast dostosowuje się do języka kraju, w którym znajduje się miasto (Kraków – polski, Москва – rosyjski, Гродна – białoruski, Delft – niderlandzki, Dania Beach – angielski).</p>
+          <div style="height: 8px;"></div>
+          <p><strong>🚶/🚌 Inteligentna trasa:</strong> Jeśli wylosowane miejsce znajduje się poniżej 5 km od Ciebie, przycisk natychmiast otwiera trasę <strong>pieszą</strong> w Google Maps. Jeśli 5 km i więcej – trasę <strong>transportem publicznym</strong>.</p>
+          <div style="height: 8px;"></div>
+          <p><strong>⚡ PWA & Offline:</strong> Aplikacja działa offline, zapamiętuje wybrane miasto i może zostać zainstalowana na ekranie smartfona.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-msg"></div>
+  </div>
+
+</body>
+</html>
