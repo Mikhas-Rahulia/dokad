@@ -20,8 +20,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   
-  <script type="module" crossorigin src="./assets/index-ESIzlmwt.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BxbA1NTy.css">
+  <script type="module" crossorigin src="./assets/index-gXtXbhvC.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BBDCwtIW.css">
 </head>
 <body>
   <div id="app" class="pixel-app">
@@ -220,6 +220,49 @@
             <div id="day-memories-list" class="day-memories-list">
               <!-- Dynamically populated photo cards -->
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating PWA Install Prompt Banner -->
+    <div id="pwa-install-banner" class="pwa-install-banner" style="display: none;">
+      <div class="pwa-banner-content">
+        <div class="pwa-banner-icon">📲</div>
+        <div class="pwa-banner-text">
+          <div id="pwa-install-title" class="pwa-title">Установить «Куда?» как приложение</div>
+          <div id="pwa-install-subtitle" class="pwa-subtitle">Быстрый запуск, полный экран и работа оффлайн!</div>
+        </div>
+      </div>
+      <div class="pwa-banner-actions">
+        <button id="btn-pwa-install-action" class="pixel-btn pixel-btn-install">
+          📲 УСТАНОВИТЬ
+        </button>
+        <button id="btn-pwa-install-dismiss" class="pixel-btn pixel-btn-dismiss">
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- iOS Safari & Desktop PWA Instructions Modal -->
+    <div id="modal-pwa-ios-instructions" class="modal-overlay">
+      <div class="modal-card pixel-modal pwa-ios-modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">📲 УСТАНОВКА НА ЭКРАН «ДОМОЙ»</h3>
+          <button id="modal-pwa-ios-close" class="pixel-close-btn" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body pwa-ios-modal-body">
+          <div class="pwa-step-card">
+            <span class="step-num">1</span>
+            <p id="pwa-ios-step1">1. Нажмите иконку «Поделиться» 📤 внизу экрана Safari</p>
+          </div>
+          <div class="pwa-step-card">
+            <span class="step-num">2</span>
+            <p id="pwa-ios-step2">2. Прокрутите и выберите «На экран „Домой“» ➕</p>
+          </div>
+          <div class="pwa-ios-tip">
+            <span>💡</span>
+            <p>Приложение появится на рабочем столе вашего телефона со всеми функциями!</p>
           </div>
         </div>
       </div>
