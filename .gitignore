@@ -4,3 +4,99 @@ dist
 dist-ssr
 *.local
 .system_generated
+
+
+# ==========================================
+# Automated Backup Safeguards (.gitignore)
+# ==========================================
+
+# Dependencies & Package Managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+vendor/
+.pnp
+.pnp.js
+
+# Environments & Python
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Build Outputs & Large Binaries
+dist/
+build/
+out/
+.next/
+.nuxt/
+target/
+bin/
+obj/
+*.exe
+*.dll
+*.iso
+*.7z
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.apk
+*.aab
+*.dmg
+*.pkg
+*.app
+*.class
+*.jar
+*.war
+*.ear
+
+# Media & Large Files (>50MB)
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.wmv
+*.flv
+*.webm
+*.psd
+*.ai
+
+# System, Cache & IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+.gradle/
+.kotlin/
+*.log
+
+# Sensitive Credentials, Tokens & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+*.cer
+secrets.json
+credentials.json
+token*.json
+auth*.json
+*token*
+*secret*
+*credential*
