@@ -1,8 +1,10 @@
 import { photoStorage } from '../geo/photoStorage.js';
+import { t } from '../i18n/translations.js';
 
 export class CalendarModal {
-  constructor(streakService) {
+  constructor(streakService, lang = 'pl') {
     this.streakService = streakService;
+    this.currentLang = lang;
 
     this.modal = document.getElementById('modal-calendar');
     this.btnClose = document.getElementById('modal-calendar-close');
@@ -18,6 +20,13 @@ export class CalendarModal {
     this.selectedDateStr = null;
 
     this.bindEvents();
+  }
+
+  updateLanguage(lang) {
+    this.currentLang = lang;
+    if (this.modal.classList.contains('active')) {
+      this.render();
+    }
   }
 
   bindEvents() {
@@ -45,11 +54,11 @@ export class CalendarModal {
   async render() {
     const year = this.currentDate.getFullYear();
     const month = this.currentDate.getMonth();
-    const monthNames = [
-      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
-    ];
-    this.monthTitle.textContent = `${monthNames[month]} ${year}`;
+
+    const localeMap = { pl: 'pl-PL', ru: 'ru-RU', be: 'be-BY', nl: 'nl-NL', en: 'en-US' };
+    const locale = localeMap[this.currentLang] || 'en-US';
+    const monthName = new Intl.DateTimeFormat(locale, { month: 'long' }).format(this.currentDate).toUpperCase();
+    this.monthTitle.textContent = `${monthName} ${year}`;
 
     const stats = this.streakService.getStreakStats();
     const completedDates = stats.completedDates || [];
@@ -94,8 +103,8 @@ export class CalendarModal {
 
   async showDayMemories(dateStr) {
     this.selectedDateStr = dateStr;
-    this.dayMemoriesTitle.textContent = `📅 MEMORIES: ${dateStr}`;
-    this.dayMemoriesList.innerHTML = '<div class="loading-text">LOADING PHOTOS...</div>';
+    this.dayMemoriesTitle.textContent = `${t('calendarTitle', this.currentLang)}: ${dateStr}`;
+    this.dayMemoriesList.innerHTML = '<div class="loading-text">...</div>';
     this.dayMemoriesContainer.style.display = 'flex';
 
     const photos = await photoStorage.getPhotosByDate(dateStr);
@@ -104,7 +113,7 @@ export class CalendarModal {
       this.dayMemoriesList.innerHTML = `
         <div class="no-memories-msg">
           <span>📷</span>
-          <p>No verified photos taken on this date.</p>
+          <p>${t('noMemoriesDay', this.currentLang)}</p>
         </div>
       `;
       return;
@@ -119,7 +128,7 @@ export class CalendarModal {
       card.innerHTML = `
         <div class="memory-photo-frame">
           <img src="${photo.image}" alt="Spot #${photo.step}" class="memory-img" />
-          <div class="memory-badge-top">SPOT #${photo.step}</div>
+          <div class="memory-badge-top">${t('spotLabel', this.currentLang)} #${photo.step}</div>
         </div>
         <div class="memory-caption">
           <div class="memory-meta">

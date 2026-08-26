@@ -5,17 +5,23 @@ import path from 'path';
 const ARTIFACTS_DIR = 'C:\\Users\\Lenovo\\.gemini\\antigravity\\brain\\b798c2ef-885b-40a4-8202-ecd7f1334a45';
 
 async function runBrowserCheck() {
-  console.log('🚀 Starting Vite preview server...');
   const server = spawn('npx.cmd', ['vite', 'preview', '--port', '5199', '--strictPort'], {
     cwd: process.cwd(),
-    stdio: 'pipe',
-    shell: true
+    shell: true,
+    stdio: ['ignore', 'pipe', 'pipe']
   });
 
   server.stdout.on('data', (d) => console.log(`[Vite] ${d}`));
   server.stderr.on('data', (d) => console.error(`[Vite ERR] ${d}`));
 
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise((resolve) => {
+    server.stdout.on('data', (d) => {
+      if (d.toString().includes('Local:')) {
+        resolve();
+      }
+    });
+    setTimeout(resolve, 3000);
+  });
 
   console.log('🌐 Launching Chromium browser with mock GPS...');
   const browser = await chromium.launch({ headless: true });
@@ -52,7 +58,7 @@ async function runBrowserCheck() {
   await page.click('#btn-passkey-register');
   await page.waitForTimeout(800);
 
-  console.log('📸 Screenshot 2: Main App Screen...');
+  console.log('📸 Screenshot 2: Main App Screen (Polish/Default)...');
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_2_unlocked_home.png') });
 
   console.log('🎲 Generating Today\'s 3 Walk Destinations...');
@@ -61,6 +67,11 @@ async function runBrowserCheck() {
 
   console.log('📸 Screenshot 3: Active Daily 3-Spot Tour with Route...');
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_3_active_walk.png') });
+
+  console.log('🌐 Testing Language Switcher (Switching to Russian)...');
+  await page.selectOption('#lang-select', 'ru');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_3_lang_ru.png') });
 
   console.log('📅 Opening Memories Calendar...');
   await page.click('#btn-open-calendar');

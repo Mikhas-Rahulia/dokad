@@ -2,19 +2,22 @@
  * Cross-Platform Passkey & Universal Portable Access Key Authentication.
  * Works seamlessly across Windows, macOS, Linux, iOS Safari, Android Chrome, and Native Android App.
  */
+import { t } from '../i18n/translations.js';
 
 const STORAGE_KEY_PASSKEY = 'dokad_passkey_credential_v1';
 const STORAGE_KEY_ACCESS_KEY = 'dokad_universal_access_key_v1';
 
 export class PasskeyAuth {
-  constructor(onUnlockedCallback) {
+  constructor(onUnlockedCallback, lang = 'pl') {
     this.onUnlocked = onUnlockedCallback;
+    this.currentLang = lang;
     this.isUnlocked = false;
 
     this.overlay = document.getElementById('passkey-lock-overlay');
     this.btnUnlockPasskey = document.getElementById('btn-passkey-unlock');
     this.btnRegisterPasskey = document.getElementById('btn-passkey-register');
     this.btnEnterKeyMode = document.getElementById('btn-enter-key-mode');
+    this.btnUseKeyInstead = document.getElementById('btn-use-key-instead');
     this.btnSubmitKey = document.getElementById('btn-submit-access-key');
     this.inputAccessKey = document.getElementById('input-access-key');
     this.statusMsg = document.getElementById('passkey-status-msg');
@@ -24,8 +27,41 @@ export class PasskeyAuth {
     this.activeKeyDisplay = document.getElementById('active-access-key-display');
     this.btnCopyKey = document.getElementById('btn-copy-access-key');
 
+    // Text elements for translation
+    this.lockTitle = document.getElementById('lock-title');
+    this.lockSubtitle = document.getElementById('lock-subtitle');
+    this.btnRegisterText = document.getElementById('btn-register-text');
+    this.btnEnterKeyText = document.getElementById('btn-enter-key-text');
+    this.passkeyHelpText = document.getElementById('passkey-help-text');
+    this.btnUnlockText = document.getElementById('btn-unlock-text');
+    this.btnUseKeyText = document.getElementById('btn-use-key-text');
+    this.btnSubmitKeyText = document.getElementById('btn-submit-key-text');
+    this.yourDeviceKeyLabel = document.getElementById('your-device-key-label');
+    this.btnCopyKeyText = document.getElementById('btn-copy-key-text');
+
     this.bindEvents();
+    this.updateLanguageStrings();
     this.checkInitialState();
+  }
+
+  updateLanguage(lang) {
+    this.currentLang = lang;
+    this.updateLanguageStrings();
+  }
+
+  updateLanguageStrings() {
+    const l = this.currentLang;
+    if (this.lockTitle) this.lockTitle.textContent = t('lockBrand', l);
+    if (this.lockSubtitle) this.lockSubtitle.textContent = t('lockSubtitle', l);
+    if (this.btnRegisterText) this.btnRegisterText.textContent = t('setupPasskeyBtn', l);
+    if (this.btnEnterKeyText) this.btnEnterKeyText.textContent = t('enterKeyModeBtn', l);
+    if (this.passkeyHelpText) this.passkeyHelpText.textContent = t('passkeyHelpText', l);
+    if (this.btnUnlockText) this.btnUnlockText.textContent = t('unlockPasskeyBtn', l);
+    if (this.btnUseKeyText) this.btnUseKeyText.textContent = t('useKeyInsteadBtn', l);
+    if (this.inputAccessKey) this.inputAccessKey.placeholder = t('keyInputPlaceholder', l);
+    if (this.btnSubmitKeyText) this.btnSubmitKeyText.textContent = t('unlockWithKeyBtn', l);
+    if (this.yourDeviceKeyLabel) this.yourDeviceKeyLabel.textContent = t('yourActiveKey', l);
+    if (this.btnCopyKeyText) this.btnCopyKeyText.textContent = t('copyKeyBtn', l);
   }
 
   bindEvents() {
@@ -37,6 +73,9 @@ export class PasskeyAuth {
     }
     if (this.btnEnterKeyMode) {
       this.btnEnterKeyMode.addEventListener('click', () => this.showKeyInputView());
+    }
+    if (this.btnUseKeyInstead) {
+      this.btnUseKeyInstead.addEventListener('click', () => this.showKeyInputView());
     }
     if (this.btnSubmitKey) {
       this.btnSubmitKey.addEventListener('click', () => this.verifyManualAccessKey());
@@ -101,7 +140,7 @@ export class PasskeyAuth {
     this.registerPrompt.style.display = 'flex';
     this.unlockPrompt.style.display = 'none';
     this.keyInputPrompt.style.display = 'none';
-    this.statusMsg.textContent = 'SET UP PASSKEY OR ENTER ACCESS KEY';
+    this.statusMsg.textContent = t('passkeyStatusSetKey', this.currentLang);
     this.statusMsg.style.color = 'var(--pixel-yellow)';
   }
 
@@ -110,7 +149,7 @@ export class PasskeyAuth {
     this.registerPrompt.style.display = 'none';
     this.unlockPrompt.style.display = 'flex';
     this.keyInputPrompt.style.display = 'none';
-    this.statusMsg.textContent = 'PASSKEY / BIOMETRIC UNLOCK';
+    this.statusMsg.textContent = t('passkeyStatusUnlock', this.currentLang);
     this.statusMsg.style.color = 'var(--text-secondary)';
   }
 
@@ -118,7 +157,7 @@ export class PasskeyAuth {
     this.registerPrompt.style.display = 'none';
     this.unlockPrompt.style.display = 'none';
     this.keyInputPrompt.style.display = 'flex';
-    this.statusMsg.textContent = 'PASTE UNIVERSAL ACCESS KEY';
+    this.statusMsg.textContent = t('passkeyStatusPasteKey', this.currentLang);
     this.statusMsg.style.color = 'var(--pixel-blue)';
     if (this.inputAccessKey) {
       this.inputAccessKey.focus();
@@ -130,21 +169,20 @@ export class PasskeyAuth {
     const currentKey = this.getUniversalAccessKey();
 
     if (!inputVal) {
-      this.statusMsg.textContent = '⚠️ PLEASE ENTER ACCESS KEY';
+      this.statusMsg.textContent = t('toastKeyInvalid', this.currentLang);
       this.statusMsg.style.color = 'var(--pixel-red)';
       return;
     }
 
-    // If matches current key OR user is setting/importing an existing key from another device:
     if (inputVal === currentKey || inputVal.startsWith('DOKAD-') || inputVal.length >= 6) {
       localStorage.setItem(STORAGE_KEY_ACCESS_KEY, inputVal);
       if (this.activeKeyDisplay) this.activeKeyDisplay.textContent = inputVal;
 
-      this.statusMsg.textContent = '✅ ACCESS KEY VERIFIED!';
+      this.statusMsg.textContent = t('toastKeyVerified', this.currentLang);
       this.statusMsg.style.color = 'var(--pixel-green)';
       setTimeout(() => this.unlockApp(), 400);
     } else {
-      this.statusMsg.textContent = '❌ INVALID KEY (USE DOKAD-XXXX-XXXX-XXXX)';
+      this.statusMsg.textContent = t('toastKeyInvalid', this.currentLang);
       this.statusMsg.style.color = 'var(--pixel-red)';
     }
   }
@@ -154,7 +192,7 @@ export class PasskeyAuth {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(key).then(() => {
         if (this.statusMsg) {
-          this.statusMsg.textContent = '📋 ACCESS KEY COPIED!';
+          this.statusMsg.textContent = t('toastKeyCopied', this.currentLang);
           this.statusMsg.style.color = 'var(--pixel-green)';
         }
       });
@@ -168,7 +206,7 @@ export class PasskeyAuth {
     }
 
     try {
-      this.statusMsg.textContent = '🔐 CREATING PASSKEY...';
+      this.statusMsg.textContent = t('passkeyStatusSetKey', this.currentLang);
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
@@ -207,7 +245,7 @@ export class PasskeyAuth {
       if (credential) {
         const rawId = arrayBufferToBase64(credential.rawId);
         localStorage.setItem(STORAGE_KEY_PASSKEY, rawId);
-        this.statusMsg.textContent = '✅ PASSKEY CONFIGURED!';
+        this.statusMsg.textContent = '✅ ' + t('passkeyStatusUnlock', this.currentLang);
         this.statusMsg.style.color = 'var(--pixel-green)';
         setTimeout(() => this.unlockApp(), 600);
       }
@@ -225,7 +263,7 @@ export class PasskeyAuth {
     }
 
     try {
-      this.statusMsg.textContent = '🔐 VERIFYING BIOMETRICS...';
+      this.statusMsg.textContent = t('passkeyStatusUnlock', this.currentLang);
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
@@ -248,7 +286,7 @@ export class PasskeyAuth {
       const assertion = await navigator.credentials.get(getOptions);
 
       if (assertion) {
-        this.statusMsg.textContent = '✅ UNLOCKED!';
+        this.statusMsg.textContent = '✅ ' + t('toastUnlocked', this.currentLang);
         this.statusMsg.style.color = 'var(--pixel-green)';
         setTimeout(() => this.unlockApp(), 400);
       }

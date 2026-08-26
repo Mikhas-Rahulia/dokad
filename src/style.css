@@ -201,6 +201,20 @@ html, body {
   gap: 8px;
 }
 
+.pixel-select {
+  font-family: var(--font-pixel);
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 6px 8px;
+  background: var(--surface-card);
+  color: var(--pixel-yellow);
+  border: var(--border-thick);
+  box-shadow: var(--pixel-shadow-sm);
+  cursor: pointer;
+  outline: none;
+  text-transform: uppercase;
+}
+
 .pixel-btn-nav {
   padding: 8px 12px;
   font-size: 0.85rem;

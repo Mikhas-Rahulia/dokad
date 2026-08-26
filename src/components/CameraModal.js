@@ -1,5 +1,8 @@
+import { t } from '../i18n/translations.js';
+
 export class CameraModal {
-  constructor() {
+  constructor(lang = 'pl') {
+    this.currentLang = lang;
     this.modal = document.getElementById('modal-camera');
     this.video = document.getElementById('camera-video');
     this.canvas = document.getElementById('camera-canvas');
@@ -13,6 +16,8 @@ export class CameraModal {
     this.btnSwitchCam = document.getElementById('btn-camera-switch');
     this.fileInput = document.getElementById('camera-file-input');
     this.cameraTitle = document.getElementById('camera-modal-title');
+    this.btnRetakeText = document.getElementById('btn-retake-text');
+    this.btnConfirmText = document.getElementById('btn-confirm-text');
 
     this.stream = null;
     this.facingMode = 'environment';
@@ -30,6 +35,21 @@ export class CameraModal {
     } catch {}
 
     this.bindEvents();
+    this.updateLanguageStrings();
+  }
+
+  updateLanguage(lang) {
+    this.currentLang = lang;
+    this.updateLanguageStrings();
+  }
+
+  updateLanguageStrings() {
+    const l = this.currentLang;
+    if (this.cameraTitle && !this.modal.classList.contains('active')) {
+      this.cameraTitle.textContent = t('cameraModalHeader', l);
+    }
+    if (this.btnRetakeText) this.btnRetakeText.textContent = t('cameraRetakeBtn', l);
+    if (this.btnConfirmText) this.btnConfirmText.textContent = t('cameraConfirmBtn', l);
   }
 
   bindEvents() {
@@ -64,7 +84,8 @@ export class CameraModal {
     this.onConfirmCallback = onConfirm;
     this.capturedDataUrl = null;
 
-    this.cameraTitle.textContent = `📸 SPOT #${spotMeta.step || spotIndex + 1} VERIFICATION`;
+    const step = spotMeta.step || spotIndex + 1;
+    this.cameraTitle.textContent = `📸 ${t('spotLabel', this.currentLang)} #${step} — ${t('cameraModalHeader', this.currentLang)}`;
 
     this.viewfinderContainer.style.display = 'flex';
     this.previewContainer.style.display = 'none';

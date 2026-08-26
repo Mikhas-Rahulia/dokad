@@ -2,6 +2,7 @@ import { StreakService } from '../geo/streakService.js';
 import { PasskeyAuth } from './PasskeyAuth.js';
 import { CameraModal } from './CameraModal.js';
 import { CalendarModal } from './CalendarModal.js';
+import { t } from '../i18n/translations.js';
 import {
   formatDistance,
   checkProximity,
@@ -9,10 +10,12 @@ import {
 } from '../geo/geometry.js';
 
 export class AppUI {
-  constructor({ mapController }) {
+  constructor({ mapController, pwaPrompt = null }) {
     this.map = mapController;
+    this.pwaPrompt = pwaPrompt;
     this.streakService = new StreakService();
 
+    this.currentLang = this.detectLanguage();
     this.userLocation = null;
     this.dailyState = null;
     this.watchId = null;
@@ -20,19 +23,40 @@ export class AppUI {
     this.cacheElements();
     this.initComponents();
     this.bindEvents();
+    this.applyLanguage(this.currentLang);
     this.updateStreakBadge();
     this.initGeolocation();
     this.loadTodayTour();
   }
 
+  detectLanguage() {
+    const saved = localStorage.getItem('dokad_user_language');
+    if (saved && ['pl', 'ru', 'be', 'nl', 'en'].includes(saved)) {
+      return saved;
+    }
+    const nav = (navigator.language || 'pl').toLowerCase();
+    if (nav.startsWith('ru')) return 'ru';
+    if (nav.startsWith('be')) return 'be';
+    if (nav.startsWith('nl')) return 'nl';
+    if (nav.startsWith('en')) return 'en';
+    return 'pl';
+  }
+
   cacheElements() {
     // Header
+    this.brandTitleEl = document.getElementById('brand-title');
+    this.radiusTagEl = document.getElementById('radius-tag');
+    this.navMemoriesText = document.getElementById('nav-memories-text');
     this.streakCountEl = document.getElementById('streak-count');
     this.btnLocateMe = document.getElementById('btn-locate-me');
     this.btnOpenCalendar = document.getElementById('btn-open-calendar');
+    this.langSelect = document.getElementById('lang-select');
 
     // Cards
     this.initialCard = document.getElementById('initial-card');
+    this.initialTitleEl = document.getElementById('initial-title');
+    this.initialSubtitleEl = document.getElementById('initial-subtitle');
+    this.btnRollText = document.getElementById('btn-roll-text');
     this.btnGenerateDaily = document.getElementById('btn-generate-daily');
 
     this.tourCard = document.getElementById('tour-card');
@@ -40,24 +64,34 @@ export class AppUI {
     this.tourDistanceBadge = document.getElementById('tour-distance-badge');
     this.spotsList = document.getElementById('spots-list');
     this.btnGoogleRoute = document.getElementById('btn-google-route');
+    this.routeText = document.getElementById('route-text');
     this.btnRerollDaily = document.getElementById('btn-reroll-daily');
+    this.btnRerollText = document.getElementById('btn-reroll-text');
 
     // Toast
     this.toast = document.getElementById('toast');
   }
 
   initComponents() {
-    this.cameraModal = new CameraModal();
-    this.calendarModal = new CalendarModal(this.streakService);
+    this.cameraModal = new CameraModal(this.currentLang);
+    this.calendarModal = new CalendarModal(this.streakService, this.currentLang);
     this.passkeyAuth = new PasskeyAuth(() => {
-      this.showToast('🔓 DOKĄD UNLOCKED');
+      this.showToast(t('toastUnlocked', this.currentLang));
       if (this.userLocation) {
         this.map.recenterUser();
       }
-    });
+    }, this.currentLang);
   }
 
   bindEvents() {
+    // Language Switcher
+    if (this.langSelect) {
+      this.langSelect.value = this.currentLang;
+      this.langSelect.addEventListener('change', (e) => {
+        this.setLanguage(e.target.value);
+      });
+    }
+
     // Locate GPS
     this.btnLocateMe.addEventListener('click', () => this.centerOnUser());
 
@@ -69,12 +103,51 @@ export class AppUI {
     this.btnRerollDaily.addEventListener('click', () => this.generateDailyTour(true));
   }
 
+  setLanguage(lang) {
+    this.currentLang = lang;
+    localStorage.setItem('dokad_user_language', lang);
+    document.documentElement.lang = lang;
+
+    if (this.langSelect) {
+      this.langSelect.value = lang;
+    }
+
+    this.applyLanguage(lang);
+    this.passkeyAuth.updateLanguage(lang);
+    this.cameraModal.updateLanguage(lang);
+    this.calendarModal.updateLanguage(lang);
+    if (this.pwaPrompt) {
+      this.pwaPrompt.updateLanguage(lang);
+    }
+  }
+
+  applyLanguage(lang) {
+    // Header
+    if (this.brandTitleEl) this.brandTitleEl.textContent = t('appTitle', lang);
+    if (this.radiusTagEl) this.radiusTagEl.textContent = t('radiusTag', lang);
+    if (this.navMemoriesText) this.navMemoriesText.textContent = t('memoriesNav', lang);
+
+    // Initial Card
+    if (this.initialTitleEl) this.initialTitleEl.textContent = t('initialTitle', lang);
+    if (this.initialSubtitleEl) this.initialSubtitleEl.textContent = t('initialSubtitle', lang);
+    if (this.btnRollText) this.btnRollText.textContent = t('startWalkBtn', lang);
+
+    // Tour Card
+    if (this.routeText) this.routeText.textContent = t('openGoogleMaps', lang);
+    if (this.btnRerollText) this.btnRerollText.textContent = t('rerollSpots', lang);
+
+    // Re-render active tour with current language strings
+    if (this.dailyState) {
+      this.renderTourUI();
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // DUAL-PHASE GPS: Instant coarse → precise GNSS with battery mgmt
   // ═══════════════════════════════════════════════════════════════
   initGeolocation() {
     if (!navigator.geolocation) {
-      this.showToast('⚠️ GPS NOT AVAILABLE');
+      this.showToast(t('toastGpsReq', this.currentLang));
       return;
     }
 
@@ -131,7 +204,7 @@ export class AppUI {
     if (this.userLocation) {
       this.map.recenterUser();
     } else {
-      this.showToast('📍 LOCATING GPS...');
+      this.showToast(t('toastGpsWait', this.currentLang));
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           this.userLocation = {
@@ -141,7 +214,7 @@ export class AppUI {
           this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng);
           this.map.recenterUser();
         },
-        () => this.showToast('⚠️ GPS ACCESS REQUIRED')
+        () => this.showToast(t('toastGpsReq', this.currentLang))
       );
     }
   }
@@ -174,7 +247,7 @@ export class AppUI {
     if ('vibrate' in navigator) navigator.vibrate([20, 35, 20]);
     this.triggerConfetti();
 
-    this.showToast(isReroll ? '🎲 3 NEW SPOTS GENERATED!' : "🎯 TODAY'S 3 DESTINATIONS READY!");
+    this.showToast(isReroll ? t('toastNewSpots', this.currentLang) : t('toastSpotsReady', this.currentLang));
   }
 
   renderTourUI() {
@@ -185,11 +258,11 @@ export class AppUI {
 
     const spots = this.dailyState.spots;
     const completedCount = spots.filter(s => s.checkedIn).length;
-    const totalDistStr = formatDistance(this.dailyState.totalDistanceKm);
+    const totalDistStr = formatDistance(this.dailyState.totalDistanceKm, this.currentLang);
 
-    this.tourProgressBadge.textContent = `${completedCount}/3 COMPLETED`;
+    this.tourProgressBadge.textContent = `${completedCount}/3 ${t('completedBadge', this.currentLang)}`;
     this.tourProgressBadge.className = `pixel-badge progress-badge ${completedCount === 3 ? 'all-done' : ''}`;
-    this.tourDistanceBadge.textContent = `🚶 ${totalDistStr} ROUTE`;
+    this.tourDistanceBadge.textContent = `🚶 ${totalDistStr} ${t('routeBadge', this.currentLang)}`;
 
     this.spotsList.innerHTML = '';
 
@@ -200,28 +273,29 @@ export class AppUI {
 
       if (this.userLocation) {
         const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
-        distText = formatDistance(prox.distanceKm);
+        distText = formatDistance(prox.distanceKm, this.currentLang);
         inProximity = prox.inRange;
       }
 
+      const spotNum = spot.step || idx + 1;
       const item = document.createElement('div');
       item.className = `spot-item ${isCheckedIn ? 'done' : inProximity ? 'in-range' : ''}`;
       item.innerHTML = `
         <div class="spot-item-left">
-          <span class="spot-number-badge ${isCheckedIn ? 'done' : ''}">${isCheckedIn ? '✔' : spot.step}</span>
+          <span class="spot-number-badge ${isCheckedIn ? 'done' : ''}">${isCheckedIn ? '✔' : spotNum}</span>
           <div class="spot-details">
-            <div class="spot-title">SPOT ${spot.step}</div>
+            <div class="spot-title">${t('spotLabel', this.currentLang)} ${spotNum}</div>
             <div class="spot-distance" id="spot-dist-${idx}">
-              ${isCheckedIn ? '✅ PHOTO VERIFIED' : `📍 ${distText} away`}
+              ${isCheckedIn ? t('photoVerified', this.currentLang) : `📍 ${distText} ${t('distanceAway', this.currentLang)}`}
             </div>
           </div>
         </div>
         <div class="spot-item-right">
           ${
             isCheckedIn
-              ? `<span class="badge-checked">VERIFIED</span>`
+              ? `<span class="badge-checked">${t('verifiedText', this.currentLang)}</span>`
               : `<button class="pixel-btn pixel-btn-checkin ${inProximity ? 'ready' : ''}" data-idx="${idx}">
-                   ${inProximity ? '📸 TAKE PHOTO' : 'VERIFY'}
+                   ${inProximity ? t('takePhotoBtn', this.currentLang) : t('verifyBtn', this.currentLang)}
                  </button>`
           }
         </div>
@@ -249,17 +323,17 @@ export class AppUI {
       const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
       const distEl = document.getElementById(`spot-dist-${idx}`);
       if (distEl) {
-        distEl.textContent = `📍 ${formatDistance(prox.distanceKm)} away`;
+        distEl.textContent = `📍 ${formatDistance(prox.distanceKm, this.currentLang)} ${t('distanceAway', this.currentLang)}`;
       }
 
       const btn = document.querySelector(`.pixel-btn-checkin[data-idx="${idx}"]`);
       if (btn) {
         if (prox.inRange) {
           btn.classList.add('ready');
-          btn.textContent = '📸 TAKE PHOTO';
+          btn.textContent = t('takePhotoBtn', this.currentLang);
         } else {
           btn.classList.remove('ready');
-          btn.textContent = 'VERIFY';
+          btn.textContent = t('verifyBtn', this.currentLang);
         }
       }
     });
@@ -271,19 +345,19 @@ export class AppUI {
    */
   promptPhotoVerification(spotIndex) {
     if (!this.userLocation) {
-      this.showToast('📍 WAITING FOR GPS SIGNAL...');
+      this.showToast(t('toastGpsWait', this.currentLang));
       return;
     }
 
     const spot = this.dailyState.spots[spotIndex];
     if (spot.checkedIn) {
-      this.showToast('✅ SPOT ALREADY VERIFIED!');
+      this.showToast(t('toastAlreadyDone', this.currentLang));
       return;
     }
 
     const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
     if (!prox.inRange) {
-      this.showToast(`⚠️ Too far (${prox.distanceMeters} m). Get within 21 m to verify!`);
+      this.showToast(t('toastTooFar', this.currentLang, { dist: prox.distanceMeters }));
       if ('vibrate' in navigator) navigator.vibrate(80);
       return;
     }
@@ -307,9 +381,9 @@ export class AppUI {
       if (result.allCompleted) {
         this.updateStreakBadge();
         this.triggerConfetti(true);
-        this.showToast(`🎉 ALL 3 DESTINATIONS VERIFIED! STREAK: ${result.streak} DAYS! 🔥`);
+        this.showToast(t('toastAllDone', this.currentLang, { streak: result.streak }));
       } else {
-        this.showToast(result.message);
+        this.showToast(t('toastSpotDone', this.currentLang, { step: spotIndex + 1 }));
       }
     } else {
       this.showToast(`⚠️ ${result.message}`);

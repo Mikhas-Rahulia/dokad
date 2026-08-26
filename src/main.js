@@ -5,11 +5,12 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt.js';
 document.addEventListener('DOMContentLoaded', () => {
   const mapController = new MapController('map');
   
-  const ui = new AppUI({
-    mapController
-  });
-
   const pwaPrompt = new PWAInstallPrompt();
+  
+  const ui = new AppUI({
+    mapController,
+    pwaPrompt
+  });
 
   // Register PWA Service Worker for offline capability & instant auto-update
   if ('serviceWorker' in navigator) {
