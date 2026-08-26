@@ -6,7 +6,7 @@
   <title>Dokąd? — Pixel City Explorer</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="description" content="Pixelated PWA: Losowe punkty w granicach miast. Kraków, Москва, Гродна, Delft, Dania Beach z trasą Google Maps." />
+  <meta name="description" content="Pixelated PWA: 3 losowe punkty dziennie w granicach miast z trasą Google Maps i systemem streak." />
   <meta name="theme-color" content="#121826" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -20,8 +20,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   
-  <script type="module" crossorigin src="./assets/index-C4Pxv4pE.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BIR3PWre.css">
+  <script type="module" crossorigin src="./assets/index-BlmnkV7U.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index--vjKAeCS.css">
 </head>
 <body>
   <div id="app" class="pixel-app">
@@ -40,6 +40,10 @@
       </button>
 
       <div class="header-actions">
+        <div id="header-streak-badge" class="pixel-badge streak-badge" title="Daily Streak">
+          <span class="fire-icon">🔥</span>
+          <span id="streak-count">0</span>
+        </div>
         <button id="btn-theme-toggle" class="pixel-icon-btn" title="Motyw" aria-label="Przełącz motyw">
           <span id="theme-icon">🌙</span>
         </button>
@@ -62,38 +66,35 @@
       </button>
     </div>
 
-    <!-- Bottom Action Drawer (Thumb Zone) -->
+    <!-- Bottom Action Drawer -->
     <div class="bottom-sheet">
       <div class="bottom-sheet-content">
         
-        <!-- Destination Card (Hidden until point is rolled) -->
-        <div id="result-card" class="pixel-card result-card" style="display: none;">
-          <div class="result-header">
-            <div class="result-title-group">
-              <div class="result-badge-container">
-                <span id="dist-badge" class="pixel-badge walking">🚶 PIESZO (&lt; 5 KM)</span>
-                <span id="boundary-badge" class="pixel-sub-badge">🛡️ GRANICA</span>
-              </div>
-              <h2 id="destination-address" class="result-address">POBIERANIE...</h2>
-              <div class="result-coords" id="destination-coords">50.0647, 19.9450</div>
+        <!-- Active Daily Tour Card -->
+        <div id="tour-card" class="pixel-card tour-card" style="display: none;">
+          <div class="tour-header">
+            <div class="tour-status-row">
+              <span id="tour-progress-badge" class="pixel-badge progress-badge">0/3 UKOŃCZONO</span>
+              <span id="tour-distance-badge" class="pixel-sub-badge">🚶 2.4 KM TRASA</span>
             </div>
           </div>
 
-          <div class="result-distance-row pixel-inset-box">
-            <span id="dist-label" class="result-distance-label">DYSTANS:</span>
-            <span id="dist-value" class="result-distance-value">2.4 KM</span>
+          <!-- 3 Spots Proximity & Check-In List -->
+          <div id="spots-list" class="spots-list-container">
+            <!-- Dynamically populated -->
           </div>
 
-          <!-- Smart Route Button -->
-          <div class="route-buttons-group">
-            <a id="btn-route-primary" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-main-route walking">
-              <span id="route-icon">🚶</span>
-              <span id="route-text">TRASA PIESZA (GOOGLE)</span>
-            </a>
-          </div>
+          <!-- Direct Optimal Google Maps Walking Route Link -->
+          <a id="btn-google-route" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-main-route">
+            <span class="route-icon">🚶</span>
+            <span id="route-text" class="route-label">TRASA PIESZA (GOOGLE MAPS)</span>
+          </a>
 
           <!-- Secondary Actions -->
           <div class="secondary-actions">
+            <button id="btn-reroll-daily" class="pixel-btn pixel-btn-secondary" title="Losuj nowe 3 punkty">
+              <span>🎲</span> <span id="reroll-text">NOWE 3 PUNKTY</span>
+            </button>
             <button id="btn-copy-coords" class="pixel-btn pixel-btn-secondary" title="Kopiuj współrzędne">
               <span>📋</span> <span id="copy-text">KOPIUJ</span>
             </button>
@@ -106,19 +107,16 @@
           </div>
         </div>
 
-        <!-- Primary Roll Button -->
-        <button id="btn-roll-main" class="pixel-btn pixel-btn-roll">
-          <span class="dice-icon">🎲</span>
-          <span id="btn-roll-text">LOSUJ PUNKT</span>
-        </button>
-
-        <!-- Simulation / Testing helper toggle -->
-        <div class="simulation-bar pixel-inset-box">
-          <label class="simulation-toggle-label" for="toggle-simulate-center">
-            <input type="checkbox" id="toggle-simulate-center" class="simulation-toggle-input" />
-            <span id="simulate-label">START W CENTRUM (TEST)</span>
-          </label>
-          <span id="gps-status-indicator" class="gps-pixel-indicator">● GPS OK</span>
+        <!-- Initial Roll Card -->
+        <div id="initial-card" class="pixel-card initial-card">
+          <div class="initial-card-body">
+            <h2 id="initial-title" class="initial-title">🎯 3 PUNKTY DNIA</h2>
+            <p id="initial-subtitle" class="initial-subtitle">Odwiedź wszystkie 3 punkty w odległości do 21 m, aby powiększyć swój Streak!</p>
+          </div>
+          <button id="btn-generate-daily" class="pixel-btn pixel-btn-roll">
+            <span class="dice-icon">🎲</span>
+            <span id="btn-roll-text">WYLOSUJ 3 PUNKTY DNIA</span>
+          </button>
         </div>
 
       </div>
@@ -156,18 +154,18 @@
     <div id="modal-info" class="modal-overlay">
       <div class="modal-card pixel-modal">
         <div class="modal-header">
-          <h3 class="modal-title">DOKĄD? / PIXEL EDITION</h3>
-          <p class="modal-subtitle">Eksploruj losowe miejsca w granicach miast</p>
+          <h3 class="modal-title">DOKĄD? / PIXEL DAILY EDITION</h3>
+          <p class="modal-subtitle">3 losowe miejsca dziennie w granicach miast</p>
           <button id="modal-info-close" class="pixel-close-btn" aria-label="Zamknij">✕</button>
         </div>
         <div class="modal-body pixel-info-text">
-          <p><strong>🕹️ 100% ŚCISŁE GRANICE:</strong> Punkty są losowane czystym algorytmem Ray-Casting ściśle w oficjalnych granicach miasta.</p>
+          <p><strong>🎯 3 PUNKTY DZIENNIE:</strong> Każdego dnia generowane są 3 nowe punkty ściśle w oficjalnych granicach wybranego miasta.</p>
           <div style="height: 10px;"></div>
-          <p><strong>🌐 JĘZYK MIASTA:</strong> Język automatycznie zmienia się na język kraju wybranego miasta (Kraków – polski, Москва – rosyjski, Гродна – białoruski, Delft – niderlandzki, Dania Beach – angielski).</p>
+          <p><strong>🔥 SYSTEM STREAK & 21M:</strong> Podejdź na odległość do 21 metrów do każdego punktu i kliknij Odmelduj. Ukończ wszystkie 3, aby budować codzienny streak!</p>
           <div style="height: 10px;"></div>
-          <p><strong>🚶/🚌 TRASA:</strong> Do 5 km – trasa piesza w Google Maps. Od 5 km – komunikacja miejska w Google Maps.</p>
+          <p><strong>🚶 OPTYMALNA TRASA:</strong> Aplikacja układa najkrótszą kolejność odwiedzin i otwiera gotową trasę w Google Maps.</p>
           <div style="height: 10px;"></div>
-          <p><strong>💾 PWA & OFFLINE:</strong> Aplikacja działa bez internetu i zapisuje ostatni wybrany город.</p>
+          <p><strong>🌐 JĘZYK MIASTA:</strong> Język automatycznie zmienia się na język kraju wybranego miasta.</p>
         </div>
       </div>
     </div>
