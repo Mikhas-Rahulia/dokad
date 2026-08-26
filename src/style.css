@@ -1025,9 +1025,19 @@ html, body {
 }
 
 .pixel-btn-dismiss {
-  padding: 8px;
+  padding: 8px 10px;
   font-size: 0.82rem;
   background: var(--surface-bg);
+  color: var(--text-muted);
+  min-width: 32px;
+  text-align: center;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.pixel-btn-dismiss.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 

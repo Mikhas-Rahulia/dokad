@@ -1,11 +1,16 @@
 import { t } from '../i18n/translations.js';
 
-const DISMISS_KEY = 'dokad_pwa_install_dismissed_until_v1';
+const PROMPT_SEEN_KEY = 'dokad_pwa_one_time_prompt_v2';
+const SHOW_DELAY_MS = 10000; // Trigger after 10 seconds of usage
+const CLOSE_UNLOCK_SECONDS = 3; // Closable after 3 seconds
 
 export class PWAInstallPrompt {
   constructor() {
     this.deferredPrompt = null;
     this.currentLang = this.detectLanguage();
+    this.timerId = null;
+    this.closeCountdownInterval = null;
+    this.isCloseUnlocked = false;
 
     this.banner = document.getElementById('pwa-install-banner');
     this.btnInstall = document.getElementById('btn-pwa-install-action');
@@ -42,38 +47,41 @@ export class PWAInstallPrompt {
     return /iphone|ipad|ipod/.test(ua);
   }
 
-  isDismissed() {
-    const dismissedUntil = localStorage.getItem(DISMISS_KEY);
-    if (!dismissedUntil) return false;
-    return Date.now() < Number(dismissedUntil);
+  hasAlreadySeenPrompt() {
+    return localStorage.getItem(PROMPT_SEEN_KEY) === 'true';
+  }
+
+  markAsSeen() {
+    localStorage.setItem(PROMPT_SEEN_KEY, 'true');
   }
 
   init() {
-    if (this.isStandalone()) {
-      return; // Already running as installed PWA
+    // If running inside installed PWA or already seen prompt, do not show
+    if (this.isStandalone() || this.hasAlreadySeenPrompt()) {
+      return;
     }
 
     this.bindEvents();
     this.updateLanguageStrings();
 
-    // Listen for Chromium / Android install prompt
+    // Listen for Chromium / Android beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredPrompt = e;
-      if (!this.isDismissed()) {
-        this.showBanner();
-      }
     });
 
-    // iOS Safari or Firefox/Desktop fallback prompt
-    if (this.isIos() && !this.isDismissed()) {
-      setTimeout(() => this.showBanner(), 2500);
-    }
+    // Schedule 1-time prompt to show strictly after 10 seconds of usage
+    this.timerId = setTimeout(() => {
+      if (!this.isStandalone() && !this.hasAlreadySeenPrompt()) {
+        this.showBanner();
+      }
+    }, SHOW_DELAY_MS);
 
     window.addEventListener('appinstalled', () => {
       this.hideBanner();
+      this.markAsSeen();
       this.deferredPrompt = null;
-      console.log('🎉 Dokąd PWA installed successfully!');
+      console.log('🎉 Dokąd PWA installed!');
     });
   }
 
@@ -82,7 +90,11 @@ export class PWAInstallPrompt {
       this.btnInstall.addEventListener('click', () => this.handleInstallClick());
     }
     if (this.btnDismiss) {
-      this.btnDismiss.addEventListener('click', () => this.dismiss());
+      this.btnDismiss.addEventListener('click', () => {
+        if (this.isCloseUnlocked) {
+          this.dismiss();
+        }
+      });
     }
     if (this.iosCloseBtn) {
       this.iosCloseBtn.addEventListener('click', () => {
@@ -101,16 +113,43 @@ export class PWAInstallPrompt {
     if (this.titleEl) this.titleEl.textContent = t('pwaInstallTitle', lang);
     if (this.subtitleEl) this.subtitleEl.textContent = t('pwaInstallSubtitle', lang);
     if (this.btnInstall) this.btnInstall.textContent = t('pwaInstallButton', lang);
-    if (this.btnDismiss) this.btnDismiss.textContent = t('pwaDismiss', lang);
     if (this.iosStep1El) this.iosStep1El.textContent = t('pwaIosStep1', lang);
     if (this.iosStep2El) this.iosStep2El.textContent = t('pwaIosStep2', lang);
   }
 
   showBanner() {
-    if (this.banner) {
-      this.banner.style.display = 'flex';
-      setTimeout(() => this.banner.classList.add('visible'), 50);
-    }
+    if (!this.banner) return;
+
+    this.banner.style.display = 'flex';
+    setTimeout(() => this.banner.classList.add('visible'), 50);
+
+    // 3-second countdown before close button becomes active
+    this.startCloseCountdown();
+  }
+
+  startCloseCountdown() {
+    if (!this.btnDismiss) return;
+
+    let remaining = CLOSE_UNLOCK_SECONDS;
+    this.isCloseUnlocked = false;
+    this.btnDismiss.disabled = true;
+    this.btnDismiss.classList.add('locked');
+    this.btnDismiss.textContent = `${remaining}s`;
+
+    if (this.closeCountdownInterval) clearInterval(this.closeCountdownInterval);
+
+    this.closeCountdownInterval = setInterval(() => {
+      remaining--;
+      if (remaining > 0) {
+        this.btnDismiss.textContent = `${remaining}s`;
+      } else {
+        clearInterval(this.closeCountdownInterval);
+        this.isCloseUnlocked = true;
+        this.btnDismiss.disabled = false;
+        this.btnDismiss.classList.remove('locked');
+        this.btnDismiss.textContent = '✕';
+      }
+    }, 1000);
   }
 
   hideBanner() {
@@ -120,11 +159,16 @@ export class PWAInstallPrompt {
         this.banner.style.display = 'none';
       }, 300);
     }
+    if (this.closeCountdownInterval) {
+      clearInterval(this.closeCountdownInterval);
+    }
   }
 
   async handleInstallClick() {
+    this.markAsSeen();
+
     if (this.deferredPrompt) {
-      // Chromium, Android Chrome, Edge, Desktop Chrome
+      // Chromium / Android Chrome / Edge
       this.deferredPrompt.prompt();
       const { outcome } = await this.deferredPrompt.userChoice;
       if (outcome === 'accepted') {
@@ -132,22 +176,22 @@ export class PWAInstallPrompt {
       }
       this.deferredPrompt = null;
     } else if (this.isIos()) {
-      // iOS Safari Add to Home Screen Instructions Modal
+      // iOS Safari Add to Home Screen Modal
       if (this.iosModal) {
         this.iosModal.classList.add('active');
       }
+      this.hideBanner();
     } else {
-      // Firefox or other browser fallback
+      // Other browsers
       if (this.iosModal) {
         this.iosModal.classList.add('active');
       }
+      this.hideBanner();
     }
   }
 
   dismiss() {
+    this.markAsSeen();
     this.hideBanner();
-    // Dismiss for 2 days
-    const twoDaysLater = Date.now() + 2 * 24 * 60 * 60 * 1000;
-    localStorage.setItem(DISMISS_KEY, String(twoDaysLater));
   }
 }
