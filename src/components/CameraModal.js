@@ -20,6 +20,14 @@ export class CameraModal {
     this.currentSpotMeta = null;
     this.onConfirmCallback = null;
     this.capturedDataUrl = null;
+    this.watermarkWorker = null;
+
+    try {
+      this.watermarkWorker = new Worker(
+        new URL('../workers/watermarkWorker.js', import.meta.url),
+        { type: 'module' }
+      );
+    } catch {}
 
     this.bindEvents();
   }
@@ -69,7 +77,6 @@ export class CameraModal {
     this.stopStream();
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      // Direct to file input fallback
       this.fileInput.click();
       return;
     }
@@ -110,23 +117,47 @@ export class CameraModal {
       return;
     }
 
-    // Zero-latency GPU frame grab via createImageBitmap
-    const width = this.video.videoWidth;
-    const height = this.video.videoHeight;
+    try {
+      // Zero-latency GPU frame grab
+      const bitmap = await createImageBitmap(this.video);
+
+      // If Web Worker + OffscreenCanvas is available, offload 100% of watermarking and JPEG compression
+      if (this.watermarkWorker) {
+        const meta = {
+          step: this.currentSpotMeta?.step || this.currentSpotIndex + 1,
+          lat: this.currentSpotMeta?.lat || 0,
+          lng: this.currentSpotMeta?.lng || 0
+        };
+
+        this.watermarkWorker.onmessage = (e) => {
+          if (e.data.status === 'success') {
+            this.capturedDataUrl = e.data.dataUrl;
+            this.showPreview(this.capturedDataUrl);
+          } else {
+            this.fallbackMainThreadCapture();
+          }
+        };
+
+        this.watermarkWorker.postMessage({ imageBitmap: bitmap, meta }, [bitmap]);
+        this.stopStream();
+        return;
+      }
+    } catch {
+      this.fallbackMainThreadCapture();
+      return;
+    }
+
+    this.fallbackMainThreadCapture();
+  }
+
+  fallbackMainThreadCapture() {
+    const width = this.video.videoWidth || 1280;
+    const height = this.video.videoHeight || 720;
     this.canvas.width = width;
     this.canvas.height = height;
 
-    const ctx = this.canvas.getContext('2d', { alpha: false, desynchronized: true });
-
-    try {
-      const bitmap = await createImageBitmap(this.video);
-      ctx.drawImage(bitmap, 0, 0);
-      bitmap.close(); // Immediate GPU memory deallocation
-    } catch {
-      ctx.drawImage(this.video, 0, 0, width, height);
-    }
-
-    // BeReal pixel timestamp stamp overlay
+    const ctx = this.canvas.getContext('2d');
+    ctx.drawImage(this.video, 0, 0, width, height);
     this.stampWatermark(ctx, width, height);
 
     this.capturedDataUrl = this.canvas.toDataURL('image/jpeg', 0.85);
