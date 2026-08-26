@@ -1,13 +1,10 @@
-import { CityService } from './geo/cityService.js';
 import { MapController } from './components/MapController.js';
 import { AppUI } from './components/UI.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const cityService = new CityService();
   const mapController = new MapController('map');
   
   const ui = new AppUI({
-    cityService,
     mapController
   });
 

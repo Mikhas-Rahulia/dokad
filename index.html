@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Dokąd? — Pixel City Explorer</title>
+  <title>Dokąd? — 2km Daily Random Explorer</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="description" content="Pixelated PWA: Losowe punkty w granicach miast. Kraków, Москва, Гродна, Delft, Dania Beach z trasą Google Maps." />
+  <meta name="description" content="Generate 3 daily random spots strictly within 2 km, navigate the shortest route on Google Maps, and build your daily streak by arriving within 100m." />
   <meta name="theme-color" content="#121826" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -15,7 +15,7 @@
   <link rel="icon" type="image/svg+xml" href="./icon.svg" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
   
-  <!-- Retro Pixel Typography from Google Fonts -->
+  <!-- Retro Pixel Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
@@ -24,154 +24,80 @@
 </head>
 <body>
   <div id="app" class="pixel-app">
-    <!-- Map Container -->
+    <!-- Map Canvas -->
     <div id="map"></div>
 
-    <!-- Retro CRT Scanline Overlay -->
+    <!-- Retro CRT Scanlines -->
     <div class="pixel-scanline-overlay"></div>
 
-    <!-- Top Floating Navigation -->
+    <!-- Top Minimal Floating Header -->
     <header class="top-header">
-      <button id="btn-select-city" class="pixel-btn pixel-brand-badge" aria-label="Wybierz miasto">
-        <span class="brand-logo-icon">🕹️</span>
-        <span class="brand-text"><span id="header-city-flag">🇵🇱</span> <span id="header-city-name" class="brand-city-name">Kraków</span></span>
-        <span class="pixel-arrow">▼</span>
-      </button>
+      <div class="brand-badge">
+        <span class="brand-icon">🕹️</span>
+        <span class="brand-title">DOKĄD?</span>
+        <span class="radius-tag">2 KM</span>
+      </div>
 
-      <div class="header-actions">
-        <button id="btn-theme-toggle" class="pixel-icon-btn" title="Motyw" aria-label="Przełącz motyw">
-          <span id="theme-icon">🌙</span>
-        </button>
-        <button id="btn-info" class="pixel-icon-btn" title="Info" aria-label="Informacje">
-          <span>❓</span>
-        </button>
-        <button id="btn-install-pwa" class="pixel-icon-btn" title="Zainstaluj PWA" aria-label="Zainstaluj PWA" style="display: none;">
-          <span>💾</span>
+      <div class="header-right-group">
+        <div id="header-streak-badge" class="pixel-badge streak-badge" title="Daily Streak">
+          <span class="fire-icon">🔥</span>
+          <span id="streak-count">0</span>
+          <span class="streak-label">DAYS</span>
+        </div>
+        <button id="btn-locate-me" class="pixel-icon-btn" title="Center on GPS" aria-label="Center on GPS">
+          <span>📍</span>
         </button>
       </div>
     </header>
 
-    <!-- Floating Map Controls -->
-    <div class="map-floating-controls">
-      <button id="btn-locate-me" class="pixel-icon-btn" title="GPS" aria-label="GPS">
-        <span>📍</span>
-      </button>
-      <button id="btn-recenter-city" class="pixel-icon-btn" title="Centruj" aria-label="Centruj na mieście">
-        <span>🗺️</span>
-      </button>
-    </div>
-
-    <!-- Bottom Action Drawer (Thumb Zone) -->
+    <!-- Bottom Action Drawer -->
     <div class="bottom-sheet">
       <div class="bottom-sheet-content">
         
-        <!-- Destination Card (Hidden until point is rolled) -->
-        <div id="result-card" class="pixel-card result-card" style="display: none;">
-          <div class="result-header">
-            <div class="result-title-group">
-              <div class="result-badge-container">
-                <span id="dist-badge" class="pixel-badge walking">🚶 PIESZO (&lt; 5 KM)</span>
-                <span id="boundary-badge" class="pixel-sub-badge">🛡️ GRANICA</span>
-              </div>
-              <h2 id="destination-address" class="result-address">POBIERANIE...</h2>
-              <div class="result-coords" id="destination-coords">50.0647, 19.9450</div>
+        <!-- Active Daily Tour Card -->
+        <div id="tour-card" class="pixel-card tour-card" style="display: none;">
+          <div class="tour-header">
+            <div class="tour-status-row">
+              <span id="tour-progress-badge" class="pixel-badge progress-badge">0/3 COMPLETED</span>
+              <span id="tour-distance-badge" class="pixel-sub-badge">🚶 2.4 KM TOTAL</span>
             </div>
           </div>
 
-          <div class="result-distance-row pixel-inset-box">
-            <span id="dist-label" class="result-distance-label">DYSTANS:</span>
-            <span id="dist-value" class="result-distance-value">2.4 KM</span>
-          </div>
-
-          <!-- Smart Route Button -->
-          <div class="route-buttons-group">
-            <a id="btn-route-primary" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-main-route walking">
-              <span id="route-icon">🚶</span>
-              <span id="route-text">TRASA PIESZA (GOOGLE)</span>
-            </a>
-          </div>
-
-          <!-- Secondary Actions -->
-          <div class="secondary-actions">
-            <button id="btn-copy-coords" class="pixel-btn pixel-btn-secondary" title="Kopiuj współrzędne">
-              <span>📋</span> <span id="copy-text">KOPIUJ</span>
-            </button>
-            <a id="btn-apple-maps" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-secondary" title="Apple Maps">
-              <span>🍏</span> <span>APPLE</span>
-            </a>
-            <a id="btn-yandex-maps" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-secondary" title="Yandex Maps">
-              <span>🟡</span> <span>YANDEX</span>
-            </a>
-          </div>
-        </div>
-
-        <!-- Primary Roll Button -->
-        <button id="btn-roll-main" class="pixel-btn pixel-btn-roll">
-          <span class="dice-icon">🎲</span>
-          <span id="btn-roll-text">LOSUJ PUNKT</span>
-        </button>
-
-        <!-- Simulation / Testing helper toggle -->
-        <div class="simulation-bar pixel-inset-box">
-          <label class="simulation-toggle-label" for="toggle-simulate-center">
-            <input type="checkbox" id="toggle-simulate-center" class="simulation-toggle-input" />
-            <span id="simulate-label">START W CENTRUM (TEST)</span>
-          </label>
-          <span id="gps-status-indicator" class="gps-pixel-indicator">● GPS OK</span>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- City Selection Modal -->
-    <div id="modal-city" class="modal-overlay">
-      <div class="modal-card pixel-modal">
-        <div class="modal-header">
-          <h3 id="city-modal-title" class="modal-title">WSKAŻ MIASTO W JEGO JĘZYKU</h3>
-          <p id="city-modal-subtitle" class="modal-subtitle">Wybierz miasto lub wyszukaj:</p>
-          <button id="modal-city-close" class="pixel-close-btn" aria-label="Zamknij">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="city-search-box">
-            <input type="text" id="city-search-input" class="pixel-input" placeholder="Wpisz miasto..." />
-            <button id="city-search-btn" class="pixel-btn pixel-btn-search">SZUKAJ</button>
-          </div>
-
-          <div class="pixel-section-label" id="featured-cities-label">
-            DOSTĘPNE MIASTA:
-          </div>
-
-          <div id="featured-cities-grid" class="city-grid">
+          <!-- 3 Spots Proximity & Check-In List -->
+          <div id="spots-list" class="spots-list-container">
             <!-- Dynamically populated -->
           </div>
 
-          <div id="search-status-msg" style="display: none;" class="pixel-search-status">
+          <!-- Direct Optimal Google Maps Route Link -->
+          <a id="btn-google-route" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-main-route">
+            <span class="route-icon">🗺️</span>
+            <span class="route-label">GOOGLE MAPS ROUTE</span>
+          </a>
+
+          <!-- Minimal Bottom Action Bar -->
+          <div class="secondary-actions-bar">
+            <button id="btn-reroll-daily" class="pixel-btn pixel-btn-secondary" title="Roll 3 new spots">
+              <span>🎲</span> <span>NEW 3 SPOTS</span>
+            </button>
           </div>
         </div>
+
+        <!-- Initial Roll Card (When no tour is active for today) -->
+        <div id="initial-card" class="pixel-card initial-card">
+          <div class="initial-card-body">
+            <h2 class="initial-title">🎯 TODAY'S 2 KM TOUR</h2>
+            <p class="initial-subtitle">Generate 3 random places within 2 km. Visit all 3 within 100 m to keep your daily streak!</p>
+          </div>
+          <button id="btn-generate-daily" class="pixel-btn pixel-btn-roll">
+            <span class="dice-icon">🎲</span>
+            <span>GENERATE 3 SPOTS</span>
+          </button>
+        </div>
+
       </div>
     </div>
 
-    <!-- Info / About Modal -->
-    <div id="modal-info" class="modal-overlay">
-      <div class="modal-card pixel-modal">
-        <div class="modal-header">
-          <h3 class="modal-title">DOKĄD? / PIXEL EDITION</h3>
-          <p class="modal-subtitle">Eksploruj losowe miejsca w granicach miast</p>
-          <button id="modal-info-close" class="pixel-close-btn" aria-label="Zamknij">✕</button>
-        </div>
-        <div class="modal-body pixel-info-text">
-          <p><strong>🕹️ 100% ŚCISŁE GRANICE:</strong> Punkty są losowane czystym algorytmem Ray-Casting ściśle w oficjalnych granicach miasta.</p>
-          <div style="height: 10px;"></div>
-          <p><strong>🌐 JĘZYK MIASTA:</strong> Język automatycznie zmienia się na język kraju wybranego miasta (Kraków – polski, Москва – rosyjski, Гродна – białoruski, Delft – niderlandzki, Dania Beach – angielski).</p>
-          <div style="height: 10px;"></div>
-          <p><strong>🚶/🚌 TRASA:</strong> Do 5 km – trasa piesza w Google Maps. Od 5 km – komunikacja miejska w Google Maps.</p>
-          <div style="height: 10px;"></div>
-          <p><strong>💾 PWA & OFFLINE:</strong> Aplikacja działa bez internetu i zapisuje ostatni wybrany город.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pixel Toast Notification -->
+    <!-- Toast Notification -->
     <div id="toast" class="pixel-toast"></div>
   </div>
 
