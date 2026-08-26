@@ -257,15 +257,15 @@ export function solveOptimalRoute(origin, spots) {
 }
 
 /**
- * Checks if user is within proximity distance (e.g. 100 meters) of a spot.
+ * Checks if user is within proximity distance (e.g. 21 meters) of a spot.
  * @param {number} userLat
  * @param {number} userLng
  * @param {number} spotLat
  * @param {number} spotLng
- * @param {number} maxDistMeters (default 100)
+ * @param {number} maxDistMeters (default 21)
  * @returns {{inRange: boolean, distanceMeters: number, distanceKm: number}}
  */
-export function checkProximity(userLat, userLng, spotLat, spotLng, maxDistMeters = 100) {
+export function checkProximity(userLat, userLng, spotLat, spotLng, maxDistMeters = 21) {
   const distanceKm = calculateHaversineDistance(userLat, userLng, spotLat, spotLng);
   const distanceMeters = distanceKm * 1000;
   return {

@@ -291,7 +291,7 @@ export class AppUI {
       let inProximity = false;
 
       if (this.userLocation) {
-        const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 100);
+        const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
         distText = formatDistance(prox.distanceKm, this.currentLang);
         inProximity = prox.inRange;
       }
@@ -360,7 +360,7 @@ export class AppUI {
     this.dailyState.spots.forEach((spot, idx) => {
       if (spot.checkedIn) return;
 
-      const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 100);
+      const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
       const distEl = document.getElementById(`spot-dist-${idx}`);
       if (distEl) {
         distEl.textContent = `📍 ${formatDistance(prox.distanceKm, this.currentLang)}`;

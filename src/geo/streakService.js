@@ -128,11 +128,11 @@ export class StreakService {
       return { success: true, message: 'Already checked in!', distanceMeters: 0, spot, allCompleted: state.completed };
     }
 
-    const prox = checkProximity(userLocation.lat, userLocation.lng, spot.lat, spot.lng, 100);
+    const prox = checkProximity(userLocation.lat, userLocation.lng, spot.lat, spot.lng, 21);
     if (!prox.inRange) {
       return {
         success: false,
-        message: `Too far (${prox.distanceMeters} m). Get within 100 m to check in!`,
+        message: `Too far (${prox.distanceMeters} m). Get within 21 m to check in!`,
         distanceMeters: prox.distanceMeters
       };
     }

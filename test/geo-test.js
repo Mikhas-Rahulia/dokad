@@ -70,12 +70,12 @@ assert(orderedSpots[1].lat === p2.lat, 'Visits middle point second');
 assert(orderedSpots[2].lat === p3.lat, 'Visits farthest point third');
 assert(totalDistanceKm < 2.0, `Total route distance ~1.5 km (got ${totalDistanceKm.toFixed(2)} km)`);
 
-// Test 5: 100m Proximity Check
-console.log('\n🔍 Testing 100m Arrival Proximity:');
-const proxClose = checkProximity(50.0604, 19.9400, 50.0600, 19.9400, 100);
-assert(proxClose.inRange === true, `~45m away is within 100m proximity (got ${proxClose.distanceMeters}m)`);
-const proxFar = checkProximity(50.0630, 19.9400, 50.0600, 19.9400, 100);
-assert(proxFar.inRange === false, `~330m away is NOT within 100m proximity (got ${proxFar.distanceMeters}m)`);
+// Test 5: 21m Proximity Check
+console.log('\n🔍 Testing 21m Arrival Proximity:');
+const proxClose = checkProximity(50.06015, 19.9400, 50.0600, 19.9400, 21);
+assert(proxClose.inRange === true, `~16m away is within 21m proximity (got ${proxClose.distanceMeters}m)`);
+const proxFar = checkProximity(50.0604, 19.9400, 50.0600, 19.9400, 21);
+assert(proxFar.inRange === false, `~45m away is NOT within 21m proximity (got ${proxFar.distanceMeters}m)`);
 
 // Test 6: Google Maps URL
 const gUrl = getGoogleMapsOptimalRouteUrl(origin, orderedSpots);
