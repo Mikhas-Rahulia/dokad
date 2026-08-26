@@ -1,22 +1,24 @@
-const CACHE_NAME = 'dokad-pwa-v6';
+const CACHE_NAME = 'dokad-pwa-v7';
 
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/icon.svg',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/fonts/PixelifySans-Bold.ttf',
-  '/fonts/PixelifySans-Regular.ttf',
-  '/fonts/VT323-Regular.ttf'
+const RELATIVE_ASSETS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './fonts/PixelifySans-Bold.ttf',
+  './fonts/PixelifySans-Regular.ttf',
+  './fonts/VT323-Regular.ttf'
 ];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
+      const scope = self.registration.scope;
+      const fullUrls = RELATIVE_ASSETS.map((p) => new URL(p, scope).toString());
+      return cache.addAll(fullUrls).catch((err) => {
         console.warn('Pre-caching warning:', err);
       });
     })
@@ -38,14 +40,13 @@ self.addEventListener('fetch', (event) => {
 
   // ═══════════════════════════════════════════════════════════════
   // CACHE-FIRST for immutable hashed assets (JS, CSS bundles, fonts)
-  // These are content-addressed by Vite hash — safe to cache forever
   // ═══════════════════════════════════════════════════════════════
   if (
     event.request.destination === 'script' ||
     event.request.destination === 'style' ||
     event.request.destination === 'font' ||
-    url.pathname.startsWith('/assets/') ||
-    url.pathname.startsWith('/fonts/')
+    url.pathname.includes('/assets/') ||
+    url.pathname.includes('/fonts/')
   ) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -63,10 +64,9 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // STALE-WHILE-REVALIDATE for app shell navigation (0ms load!)
-  // Serve cached version instantly, then refresh in background
+  // STALE-WHILE-REVALIDATE for HTML document navigation
   // ═══════════════════════════════════════════════════════════════
-  if (event.request.mode === 'navigate' || event.request.destination === 'document' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         const fetchPromise = fetch(event.request).then((networkResponse) => {
@@ -77,14 +77,14 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         }).catch(() => cachedResponse);
 
-        return cachedResponse || fetchPromise;
+        return cachedResponse || fetchPromise || caches.match('./index.html');
       })
     );
     return;
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // NETWORK-FIRST for map tiles (always try fresh, cache fallback)
+  // NETWORK-FIRST for dynamic map tiles
   // ═══════════════════════════════════════════════════════════════
   if (url.hostname.includes('tile.openstreetmap.org') || url.hostname.includes('nominatim')) {
     event.respondWith(
@@ -101,9 +101,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // STALE-WHILE-REVALIDATE for everything else
-  // ═══════════════════════════════════════════════════════════════
+  // Fallback SWR for everything else
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {

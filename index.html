@@ -42,10 +42,10 @@
     }
   </style>
 
-  <script type="module" crossorigin src="./assets/index-nlkMlPKB.js"></script>
+  <script type="module" crossorigin src="./assets/index-D2_QNY5e.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-map-BbBvu4SU.js">
   <link rel="stylesheet" crossorigin href="./assets/vendor-map-JR8eJ17e.css">
-  <link rel="stylesheet" crossorigin href="./assets/index-PhHsQ6fW.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-BOBuFxha.css">
 </head>
 <body>
   <div id="app" class="pixel-app">
@@ -59,13 +59,22 @@
     <header class="top-header">
       <div class="brand-badge">
         <span class="brand-icon">🕹️</span>
-        <span class="brand-title">DOKĄD?</span>
-        <span class="radius-tag">2 KM</span>
+        <span id="brand-title" class="brand-title">Dokąd?</span>
+        <span id="radius-tag" class="radius-tag">2 KM</span>
       </div>
 
       <div class="header-right-group">
+        <!-- Language Switcher -->
+        <select id="lang-select" class="pixel-select" title="Language / Język / Язык / Мова">
+          <option value="pl">PL</option>
+          <option value="ru">RU</option>
+          <option value="be">BE</option>
+          <option value="nl">NL</option>
+          <option value="en">EN</option>
+        </select>
+
         <button id="btn-open-calendar" class="pixel-btn pixel-btn-nav" title="Memories Calendar">
-          <span>📅</span> <span class="nav-btn-text">MEMORIES</span>
+          <span>📅</span> <span id="nav-memories-text" class="nav-btn-text">MEMORIES</span>
         </button>
 
         <div id="header-streak-badge" class="pixel-badge streak-badge" title="Daily Streak">
@@ -101,10 +110,10 @@
           <div class="navigation-actions">
             <a id="btn-google-route" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-main-route">
               <span class="route-icon">🗺️</span>
-              <span id="route-text" class="route-label">OPEN GOOGLE MAPS</span>
+              <span id="route-text" class="route-label">GOOGLE MAPS</span>
             </a>
             <button id="btn-reroll-daily" class="pixel-btn pixel-btn-secondary" title="Roll new 3 spots">
-              <span>🎲</span> <span>NEW 3 SPOTS</span>
+              <span>🎲</span> <span id="btn-reroll-text">NEW 3 SPOTS</span>
             </button>
           </div>
         </div>
@@ -129,8 +138,8 @@
       <div class="auth-lock-card pixel-card">
         <div class="lock-brand">
           <span class="lock-icon">🕹️</span>
-          <h2 class="lock-title">DOKĄD? PRIVATE</h2>
-          <p class="lock-subtitle">Passkey Biometric Protection</p>
+          <h2 id="lock-title" class="lock-title">DOKĄD? PRIVATE</h2>
+          <p id="lock-subtitle" class="lock-subtitle">Passkey Biometric Protection</p>
         </div>
 
         <div id="passkey-status-msg" class="passkey-status">
@@ -139,32 +148,34 @@
 
         <div id="passkey-register-prompt" class="passkey-action-group" style="display: none;">
           <button id="btn-passkey-register" class="pixel-btn pixel-btn-roll">
-            <span>🔑</span> <span>SET UP PASSKEY</span>
+            <span>🔑</span> <span id="btn-register-text">SET UP PASSKEY</span>
           </button>
           <button id="btn-enter-key-mode" class="pixel-btn pixel-btn-secondary">
-            <span>⌨️</span> <span>ENTER / PASTE ACCESS KEY</span>
+            <span>⌨️</span> <span id="btn-enter-key-text">ENTER / PASTE ACCESS KEY</span>
           </button>
-          <p class="passkey-help-text">Use Touch ID, Face ID, Windows Hello, or paste your Universal Access Key.</p>
+          <p id="passkey-help-text" class="passkey-help-text">Use Touch ID, Face ID, Windows Hello, or paste your Universal Access Key.</p>
         </div>
 
         <div id="passkey-unlock-prompt" class="passkey-action-group" style="display: none;">
           <button id="btn-passkey-unlock" class="pixel-btn pixel-btn-roll">
-            <span>👆</span> <span>UNLOCK WITH PASSKEY</span>
+            <span>👆</span> <span id="btn-unlock-text">UNLOCK WITH PASSKEY</span>
           </button>
-          <button id="btn-enter-key-mode" class="pixel-btn pixel-btn-secondary" onclick="document.getElementById('passkey-unlock-prompt').style.display='none';document.getElementById('passkey-key-input-prompt').style.display='flex';">
-            <span>⌨️</span> <span>USE ACCESS KEY INSTEAD</span>
+          <button id="btn-use-key-instead" class="pixel-btn pixel-btn-secondary">
+            <span>⌨️</span> <span id="btn-use-key-text">USE ACCESS KEY INSTEAD</span>
           </button>
         </div>
 
         <div id="passkey-key-input-prompt" class="passkey-action-group" style="display: none;">
           <input type="text" id="input-access-key" class="pixel-input" placeholder="DOKAD-XXXX-XXXX-XXXX" autocomplete="off" />
           <button id="btn-submit-access-key" class="pixel-btn pixel-btn-roll">
-            <span>🔓</span> <span>UNLOCK WITH KEY</span>
+            <span>🔓</span> <span id="btn-submit-key-text">UNLOCK WITH KEY</span>
           </button>
           <div class="active-key-info">
-            <span>YOUR ACTIVE KEY:</span>
+            <span id="your-device-key-label">YOUR DEVICE KEY:</span>
             <code id="active-access-key-display">DOKAD-XXXX-XXXX-XXXX</code>
-            <button id="btn-copy-access-key" class="pixel-btn pixel-btn-sm">📋 COPY KEY</button>
+            <button id="btn-copy-access-key" class="pixel-btn pixel-btn-sm">
+              <span id="btn-copy-key-text">📋 COPY KEY</span>
+            </button>
           </div>
         </div>
       </div>
@@ -205,10 +216,10 @@
             </div>
             <div class="preview-actions">
               <button id="btn-camera-retake" class="pixel-btn pixel-btn-secondary">
-                <span>🔄 RETAKE</span>
+                <span>🔄</span> <span id="btn-retake-text">RETAKE</span>
               </button>
               <button id="btn-camera-confirm" class="pixel-btn pixel-btn-confirm">
-                <span>✅ CONFIRM & VERIFY</span>
+                <span>✅</span> <span id="btn-confirm-text">CONFIRM & VERIFY</span>
               </button>
             </div>
           </div>
@@ -254,13 +265,13 @@
       <div class="pwa-banner-content">
         <div class="pwa-banner-icon">📲</div>
         <div class="pwa-banner-text">
-          <div id="pwa-install-title" class="pwa-title">Установить «Куда?» как приложение</div>
-          <div id="pwa-install-subtitle" class="pwa-subtitle">Быстрый запуск, полный экран и работа оффлайн!</div>
+          <div id="pwa-install-title" class="pwa-title">Dokąd? PWA</div>
+          <div id="pwa-install-subtitle" class="pwa-subtitle">Launch in 1 tap from home screen</div>
         </div>
       </div>
       <div class="pwa-banner-actions">
         <button id="btn-pwa-install-action" class="pixel-btn pixel-btn-install">
-          📲 УСТАНОВИТЬ
+          📲 INSTALL
         </button>
         <button id="btn-pwa-install-dismiss" class="pixel-btn pixel-btn-dismiss">
           ✕
@@ -272,21 +283,21 @@
     <div id="modal-pwa-ios-instructions" class="modal-overlay">
       <div class="modal-card pixel-modal pwa-ios-modal-card">
         <div class="modal-header">
-          <h3 class="modal-title">📲 УСТАНОВКА НА ЭКРАН «ДОМОЙ»</h3>
+          <h3 id="pwa-ios-modal-title" class="modal-title">📲 ADD TO HOME SCREEN</h3>
           <button id="modal-pwa-ios-close" class="pixel-close-btn" aria-label="Close">✕</button>
         </div>
         <div class="modal-body pwa-ios-modal-body">
           <div class="pwa-step-card">
             <span class="step-num">1</span>
-            <p id="pwa-ios-step1">1. Нажмите иконку «Поделиться» 📤 внизу экрана Safari</p>
+            <p id="pwa-ios-step1">1. Tap the Share icon 📤 at the bottom of Safari</p>
           </div>
           <div class="pwa-step-card">
             <span class="step-num">2</span>
-            <p id="pwa-ios-step2">2. Прокрутите и выберите «На экран „Домой“» ➕</p>
+            <p id="pwa-ios-step2">2. Scroll and select „Add to Home Screen” ➕</p>
           </div>
           <div class="pwa-ios-tip">
             <span>💡</span>
-            <p>Приложение появится на рабочем столе вашего телефона со всеми функциями!</p>
+            <p id="pwa-ios-tip-text">The app will appear on your phone's home screen with full offline access!</p>
           </div>
         </div>
       </div>

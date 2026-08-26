@@ -1,56 +1,33 @@
 {
-  "name": "Dokąd? — Losowe punkty w mieście",
+  "name": "Dokąd? — Daily 3 Walk Destinations",
   "short_name": "Dokąd?",
-  "description": "Progressive Web App do losowania tras w ścisłych granicach miast (Kraków, Москва, Гродна, Delft, Dania Beach).",
-  "start_url": "/",
+  "description": "Progressive Web App to discover 3 random spots in a 2 km radius, take BeReal verification photos, and build your daily streak.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#090d16",
-  "theme_color": "#4f46e5",
+  "background_color": "#0c0f17",
+  "theme_color": "#facc15",
   "orientation": "portrait-primary",
+  "id": "./",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
-  "categories": ["navigation", "travel", "utilities"],
-  "shortcuts": [
-    {
-      "name": "Kraków",
-      "url": "/?city=krakow",
-      "description": "Eksploruj Kraków"
-    },
-    {
-      "name": "Москва",
-      "url": "/?city=moscow",
-      "description": "Исследовать Москву"
-    },
-    {
-      "name": "Гродна",
-      "url": "/?city=grodno",
-      "description": "Даследаваць Гродна"
-    },
-    {
-      "name": "Delft",
-      "url": "/?city=delft",
-      "description": "Verken Delft"
-    },
-    {
-      "name": "Dania Beach",
-      "url": "/?city=dania_beach",
-      "description": "Explore Dania Beach"
-    }
-  ]
+  "categories": ["navigation", "travel", "utilities", "lifestyle"]
 }
