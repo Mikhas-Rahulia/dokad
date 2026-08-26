@@ -340,6 +340,10 @@ fun MainScreen(
 
         // Passkey / Biometric Lock Screen Overlay
         if (!isUnlocked) {
+            var showKeyInput by remember { mutableStateOf(false) }
+            var enteredKey by remember { mutableStateOf("") }
+            val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color(0xFF0C0F17).copy(alpha = 0.96f)
@@ -364,24 +368,105 @@ fun MainScreen(
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
-                                text = "Passkey & Biometric Protection",
+                                text = "Universal Passkey & Biometric Protection",
                                 color = Color(0xFF94A3B8),
                                 fontSize = 12.sp
                             )
 
-                            Button(
-                                onClick = onTriggerBiometrics,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFACC15)),
-                                shape = RoundedCornerShape(0.dp),
-                                border = BorderStroke(2.dp, Color.Black),
-                                modifier = Modifier.fillMaxWidth().height(48.dp)
-                            ) {
-                                Text(
-                                    text = "👆 UNLOCK WITH PASSKEY",
-                                    color = Color.Black,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
+                            if (!showKeyInput) {
+                                Button(
+                                    onClick = onTriggerBiometrics,
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFACC15)),
+                                    shape = RoundedCornerShape(0.dp),
+                                    border = BorderStroke(2.dp, Color.Black),
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                ) {
+                                    Text(
+                                        text = "👆 UNLOCK WITH PASSKEY",
+                                        color = Color.Black,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = { showKeyInput = true },
+                                    shape = RoundedCornerShape(0.dp),
+                                    border = BorderStroke(2.dp, Color.Black),
+                                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFF141B29)),
+                                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                                ) {
+                                    Text(
+                                        text = "⌨️ ENTER ACCESS KEY",
+                                        color = Color(0xFFCBD5E1),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else {
+                                OutlinedTextField(
+                                    value = enteredKey,
+                                    onValueChange = { enteredKey = it.uppercase() },
+                                    placeholder = { Text("DOKAD-XXXX-XXXX-XXXX", color = Color(0xFF94A3B8), fontSize = 12.sp) },
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color(0xFFFACC15),
+                                        unfocusedTextColor = Color(0xFFFACC15),
+                                        focusedContainerColor = Color.Black,
+                                        unfocusedContainerColor = Color.Black,
+                                        focusedBorderColor = Color(0xFFFACC15),
+                                        unfocusedBorderColor = Color.Black
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
                                 )
+
+                                Button(
+                                    onClick = { viewModel.verifyManualAccessKey(enteredKey) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFACC15)),
+                                    shape = RoundedCornerShape(0.dp),
+                                    border = BorderStroke(2.dp, Color.Black),
+                                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                                ) {
+                                    Text(
+                                        text = "🔓 UNLOCK WITH KEY",
+                                        color = Color.Black,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Surface(
+                                    color = Color(0xFF141B29),
+                                    border = BorderStroke(1.dp, Color.Black),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(text = "YOUR DEVICE KEY:", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                                        Text(
+                                            text = viewModel.getUniversalAccessKey(),
+                                            color = Color(0xFFFACC15),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Button(
+                                            onClick = {
+                                                clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(viewModel.getUniversalAccessKey()))
+                                                viewModel.showToast("📋 KEY COPIED TO CLIPBOARD")
+                                            },
+                                            shape = RoundedCornerShape(0.dp),
+                                            border = BorderStroke(1.dp, Color.Black),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF182235)),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.height(28.dp)
+                                        ) {
+                                            Text("📋 COPY KEY", color = Color.White, fontSize = 10.sp)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

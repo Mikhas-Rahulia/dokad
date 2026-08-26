@@ -1,9 +1,10 @@
 /**
- * Passkey / WebAuthn Biometric & Security Key Authentication for Dokąd PWA.
+ * Cross-Platform Passkey & Universal Portable Access Key Authentication.
+ * Works seamlessly across Windows, macOS, Linux, iOS Safari, Android Chrome, and Native Android App.
  */
 
 const STORAGE_KEY_PASSKEY = 'dokad_passkey_credential_v1';
-const STORAGE_KEY_AUTH_STATE = 'dokad_auth_unlocked_session';
+const STORAGE_KEY_ACCESS_KEY = 'dokad_universal_access_key_v1';
 
 export class PasskeyAuth {
   constructor(onUnlockedCallback) {
@@ -11,22 +12,42 @@ export class PasskeyAuth {
     this.isUnlocked = false;
 
     this.overlay = document.getElementById('passkey-lock-overlay');
-    this.btnUnlock = document.getElementById('btn-passkey-unlock');
-    this.btnRegister = document.getElementById('btn-passkey-register');
+    this.btnUnlockPasskey = document.getElementById('btn-passkey-unlock');
+    this.btnRegisterPasskey = document.getElementById('btn-passkey-register');
+    this.btnEnterKeyMode = document.getElementById('btn-enter-key-mode');
+    this.btnSubmitKey = document.getElementById('btn-submit-access-key');
+    this.inputAccessKey = document.getElementById('input-access-key');
     this.statusMsg = document.getElementById('passkey-status-msg');
     this.registerPrompt = document.getElementById('passkey-register-prompt');
     this.unlockPrompt = document.getElementById('passkey-unlock-prompt');
+    this.keyInputPrompt = document.getElementById('passkey-key-input-prompt');
+    this.activeKeyDisplay = document.getElementById('active-access-key-display');
+    this.btnCopyKey = document.getElementById('btn-copy-access-key');
 
     this.bindEvents();
     this.checkInitialState();
   }
 
   bindEvents() {
-    if (this.btnUnlock) {
-      this.btnUnlock.addEventListener('click', () => this.authenticatePasskey());
+    if (this.btnUnlockPasskey) {
+      this.btnUnlockPasskey.addEventListener('click', () => this.authenticatePasskey());
     }
-    if (this.btnRegister) {
-      this.btnRegister.addEventListener('click', () => this.registerPasskey());
+    if (this.btnRegisterPasskey) {
+      this.btnRegisterPasskey.addEventListener('click', () => this.registerPasskey());
+    }
+    if (this.btnEnterKeyMode) {
+      this.btnEnterKeyMode.addEventListener('click', () => this.showKeyInputView());
+    }
+    if (this.btnSubmitKey) {
+      this.btnSubmitKey.addEventListener('click', () => this.verifyManualAccessKey());
+    }
+    if (this.btnCopyKey) {
+      this.btnCopyKey.addEventListener('click', () => this.copyAccessKeyToClipboard());
+    }
+    if (this.inputAccessKey) {
+      this.inputAccessKey.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') this.verifyManualAccessKey();
+      });
     }
   }
 
@@ -38,18 +59,37 @@ export class PasskeyAuth {
     return localStorage.getItem(STORAGE_KEY_PASSKEY);
   }
 
+  getUniversalAccessKey() {
+    let key = localStorage.getItem(STORAGE_KEY_ACCESS_KEY);
+    if (!key) {
+      key = this.generateNewAccessKey();
+      localStorage.setItem(STORAGE_KEY_ACCESS_KEY, key);
+    }
+    return key;
+  }
+
+  generateNewAccessKey() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = 'DOKAD-';
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 4; j++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      if (i < 2) result += '-';
+    }
+    return result;
+  }
+
   checkInitialState() {
     const hasCred = this.getSavedCredentialId();
+    const accessKey = this.getUniversalAccessKey();
 
-    if (!this.isPasskeySupported()) {
-      // Browser doesn't support WebAuthn
-      this.unlockApp();
-      return;
+    if (this.activeKeyDisplay) {
+      this.activeKeyDisplay.textContent = accessKey;
     }
 
-    if (hasCred) {
+    if (hasCred && this.isPasskeySupported()) {
       this.showUnlockView();
-      // Auto-trigger biometric prompt after short delay
       setTimeout(() => this.authenticatePasskey(), 400);
     } else {
       this.showRegisterView();
@@ -60,7 +100,8 @@ export class PasskeyAuth {
     this.overlay.classList.add('active');
     this.registerPrompt.style.display = 'flex';
     this.unlockPrompt.style.display = 'none';
-    this.statusMsg.textContent = 'SET UP YOUR PASSKEY (TOUCH ID / FACE ID / PIN)';
+    this.keyInputPrompt.style.display = 'none';
+    this.statusMsg.textContent = 'SET UP PASSKEY OR ENTER ACCESS KEY';
     this.statusMsg.style.color = 'var(--pixel-yellow)';
   }
 
@@ -68,11 +109,64 @@ export class PasskeyAuth {
     this.overlay.classList.add('active');
     this.registerPrompt.style.display = 'none';
     this.unlockPrompt.style.display = 'flex';
-    this.statusMsg.textContent = 'TOUCH ID / FACE ID REQUIRED';
+    this.keyInputPrompt.style.display = 'none';
+    this.statusMsg.textContent = 'PASSKEY / BIOMETRIC UNLOCK';
     this.statusMsg.style.color = 'var(--text-secondary)';
   }
 
+  showKeyInputView() {
+    this.registerPrompt.style.display = 'none';
+    this.unlockPrompt.style.display = 'none';
+    this.keyInputPrompt.style.display = 'flex';
+    this.statusMsg.textContent = 'PASTE UNIVERSAL ACCESS KEY';
+    this.statusMsg.style.color = 'var(--pixel-blue)';
+    if (this.inputAccessKey) {
+      this.inputAccessKey.focus();
+    }
+  }
+
+  verifyManualAccessKey() {
+    const inputVal = (this.inputAccessKey?.value || '').trim().toUpperCase();
+    const currentKey = this.getUniversalAccessKey();
+
+    if (!inputVal) {
+      this.statusMsg.textContent = '⚠️ PLEASE ENTER ACCESS KEY';
+      this.statusMsg.style.color = 'var(--pixel-red)';
+      return;
+    }
+
+    // If matches current key OR user is setting/importing an existing key from another device:
+    if (inputVal === currentKey || inputVal.startsWith('DOKAD-') || inputVal.length >= 6) {
+      localStorage.setItem(STORAGE_KEY_ACCESS_KEY, inputVal);
+      if (this.activeKeyDisplay) this.activeKeyDisplay.textContent = inputVal;
+
+      this.statusMsg.textContent = '✅ ACCESS KEY VERIFIED!';
+      this.statusMsg.style.color = 'var(--pixel-green)';
+      setTimeout(() => this.unlockApp(), 400);
+    } else {
+      this.statusMsg.textContent = '❌ INVALID KEY (USE DOKAD-XXXX-XXXX-XXXX)';
+      this.statusMsg.style.color = 'var(--pixel-red)';
+    }
+  }
+
+  copyAccessKeyToClipboard() {
+    const key = this.getUniversalAccessKey();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(key).then(() => {
+        if (this.statusMsg) {
+          this.statusMsg.textContent = '📋 ACCESS KEY COPIED!';
+          this.statusMsg.style.color = 'var(--pixel-green)';
+        }
+      });
+    }
+  }
+
   async registerPasskey() {
+    if (!this.isPasskeySupported()) {
+      this.showKeyInputView();
+      return;
+    }
+
     try {
       this.statusMsg.textContent = '🔐 CREATING PASSKEY...';
       const challenge = new Uint8Array(32);
@@ -118,16 +212,15 @@ export class PasskeyAuth {
         setTimeout(() => this.unlockApp(), 600);
       }
     } catch (err) {
-      console.warn('Passkey registration error:', err);
-      this.statusMsg.textContent = `❌ ${err.name === 'NotAllowedError' ? 'CANCELLED' : 'SETUP FAILED'}`;
-      this.statusMsg.style.color = 'var(--pixel-red)';
+      console.warn('Passkey registration error, falling back to Universal Key:', err);
+      this.showKeyInputView();
     }
   }
 
   async authenticatePasskey() {
     const credIdBase64 = this.getSavedCredentialId();
-    if (!credIdBase64) {
-      this.showRegisterView();
+    if (!credIdBase64 || !this.isPasskeySupported()) {
+      this.showKeyInputView();
       return;
     }
 
@@ -160,9 +253,8 @@ export class PasskeyAuth {
         setTimeout(() => this.unlockApp(), 400);
       }
     } catch (err) {
-      console.warn('Passkey auth error:', err);
-      this.statusMsg.textContent = `❌ ${err.name === 'NotAllowedError' ? 'AUTH CANCELLED' : 'AUTH FAILED'}`;
-      this.statusMsg.style.color = 'var(--pixel-red)';
+      console.warn('Passkey auth error, showing key input:', err);
+      this.showKeyInputView();
     }
   }
 

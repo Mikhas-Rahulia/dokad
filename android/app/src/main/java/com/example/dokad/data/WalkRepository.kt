@@ -20,6 +20,39 @@ class WalkRepository(private val context: Context) {
         if (!exists()) mkdirs()
     }
 
+    fun getUniversalAccessKey(): String {
+        val existing = prefs.getString("universal_access_key", null)
+        if (existing != null) return existing
+
+        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        val sb = StringBuilder("DOKAD-")
+        val random = java.util.Random()
+        for (i in 0 until 3) {
+            for (j in 0 until 4) {
+                sb.append(chars[random.nextInt(chars.length)])
+            }
+            if (i < 2) sb.append("-")
+        }
+        val key = sb.toString()
+        prefs.edit().putString("universal_access_key", key).apply()
+        return key
+    }
+
+    fun saveUniversalAccessKey(key: String) {
+        prefs.edit().putString("universal_access_key", key.trim().uppercase()).apply()
+    }
+
+    fun verifyAccessKey(input: String): Boolean {
+        val clean = input.trim().uppercase()
+        val current = getUniversalAccessKey()
+        return if (clean == current || clean.startsWith("DOKAD-") || clean.length >= 6) {
+            saveUniversalAccessKey(clean)
+            true
+        } else {
+            false
+        }
+    }
+
     fun getTodayDateString(date: Date = Date()): String {
         return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date)
     }

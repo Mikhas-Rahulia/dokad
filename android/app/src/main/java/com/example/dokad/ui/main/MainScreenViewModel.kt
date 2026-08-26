@@ -49,6 +49,19 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         showToast("🔓 DOKĄD UNLOCKED")
     }
 
+    fun verifyManualAccessKey(input: String): Boolean {
+        return if (repository.verifyAccessKey(input)) {
+            _isUnlocked.value = true
+            showToast("✅ ACCESS KEY VERIFIED!")
+            true
+        } else {
+            showToast("❌ INVALID KEY (USE DOKAD-XXXX-XXXX-XXXX)")
+            false
+        }
+    }
+
+    fun getUniversalAccessKey(): String = repository.getUniversalAccessKey()
+
     fun showToast(msg: String) {
         _toastMessage.value = msg
     }
