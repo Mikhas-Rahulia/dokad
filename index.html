@@ -15,13 +15,37 @@
   <link rel="icon" type="image/svg+xml" href="./icon.svg" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
   
-  <!-- Retro Pixel Typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
-  
-  <script type="module" crossorigin src="./assets/index-gXtXbhvC.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BBDCwtIW.css">
+  <!-- Self-Hosted Fonts — No Google Fonts waterfall, preloaded for 0ms FOIT -->
+  <link rel="preload" href="./fonts/PixelifySans-Bold.ttf" as="font" type="font/ttf" crossorigin="anonymous">
+  <link rel="preload" href="./fonts/VT323-Regular.ttf" as="font" type="font/ttf" crossorigin="anonymous">
+  <style>
+    @font-face {
+      font-family: 'Pixelify Sans';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('./fonts/PixelifySans-Regular.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Pixelify Sans';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('./fonts/PixelifySans-Bold.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'VT323';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('./fonts/VT323-Regular.ttf') format('truetype');
+    }
+  </style>
+
+  <script type="module" crossorigin src="./assets/index-CvYPceNV.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/vendor-map-BbBvu4SU.js">
+  <link rel="stylesheet" crossorigin href="./assets/vendor-map-JR8eJ17e.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-DMqSOhOT.css">
 </head>
 <body>
   <div id="app" class="pixel-app">
