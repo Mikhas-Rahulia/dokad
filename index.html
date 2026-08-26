@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Dokąd? — Pixel City Explorer</title>
+  <title>Dokąd? — Daily 3 Walk Destinations</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="description" content="Pixelated PWA: 3 losowe punkty dziennie w granicach miast z trasą Google Maps i systemem streak." />
-  <meta name="theme-color" content="#121826" />
+  <meta name="description" content="Daily 3 walk destinations in a 2 km radius. Reach 21m proximity, snap BeReal verification photos, and build your daily streak." />
+  <meta name="theme-color" content="#0c0f17" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Dokąd?" />
@@ -15,56 +15,45 @@
   <link rel="icon" type="image/svg+xml" href="./icon.svg" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
   
-  <!-- Retro Pixel Typography from Google Fonts -->
+  <!-- Retro Pixel Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   
-  <script type="module" crossorigin src="./assets/index-BlmnkV7U.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index--vjKAeCS.css">
+  <script type="module" crossorigin src="./assets/index-DgEQt4wO.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-C9-iPD3r.css">
 </head>
 <body>
   <div id="app" class="pixel-app">
-    <!-- Map Container -->
+    <!-- Map Canvas -->
     <div id="map"></div>
 
     <!-- Retro CRT Scanline Overlay -->
     <div class="pixel-scanline-overlay"></div>
 
-    <!-- Top Floating Navigation -->
+    <!-- Top Minimal Floating Header -->
     <header class="top-header">
-      <button id="btn-select-city" class="pixel-btn pixel-brand-badge" aria-label="Wybierz miasto">
-        <span class="brand-logo-icon">🕹️</span>
-        <span class="brand-text"><span id="header-city-flag">🇵🇱</span> <span id="header-city-name" class="brand-city-name">Kraków</span></span>
-        <span class="pixel-arrow">▼</span>
-      </button>
+      <div class="brand-badge">
+        <span class="brand-icon">🕹️</span>
+        <span class="brand-title">DOKĄD?</span>
+        <span class="radius-tag">2 KM</span>
+      </div>
 
-      <div class="header-actions">
+      <div class="header-right-group">
+        <button id="btn-open-calendar" class="pixel-btn pixel-btn-nav" title="Memories Calendar">
+          <span>📅</span> <span class="nav-btn-text">MEMORIES</span>
+        </button>
+
         <div id="header-streak-badge" class="pixel-badge streak-badge" title="Daily Streak">
           <span class="fire-icon">🔥</span>
           <span id="streak-count">0</span>
         </div>
-        <button id="btn-theme-toggle" class="pixel-icon-btn" title="Motyw" aria-label="Przełącz motyw">
-          <span id="theme-icon">🌙</span>
-        </button>
-        <button id="btn-info" class="pixel-icon-btn" title="Info" aria-label="Informacje">
-          <span>❓</span>
-        </button>
-        <button id="btn-install-pwa" class="pixel-icon-btn" title="Zainstaluj PWA" aria-label="Zainstaluj PWA" style="display: none;">
-          <span>💾</span>
+
+        <button id="btn-locate-me" class="pixel-icon-btn" title="Locate GPS" aria-label="Locate GPS">
+          <span>📍</span>
         </button>
       </div>
     </header>
-
-    <!-- Floating Map Controls -->
-    <div class="map-floating-controls">
-      <button id="btn-locate-me" class="pixel-icon-btn" title="GPS" aria-label="GPS">
-        <span>📍</span>
-      </button>
-      <button id="btn-recenter-city" class="pixel-icon-btn" title="Centruj" aria-label="Centruj na mieście">
-        <span>🗺️</span>
-      </button>
-    </div>
 
     <!-- Bottom Action Drawer -->
     <div class="bottom-sheet">
@@ -74,98 +63,146 @@
         <div id="tour-card" class="pixel-card tour-card" style="display: none;">
           <div class="tour-header">
             <div class="tour-status-row">
-              <span id="tour-progress-badge" class="pixel-badge progress-badge">0/3 UKOŃCZONO</span>
-              <span id="tour-distance-badge" class="pixel-sub-badge">🚶 2.4 KM TRASA</span>
+              <span id="tour-progress-badge" class="pixel-badge progress-badge">0/3 COMPLETED</span>
+              <span id="tour-distance-badge" class="pixel-sub-badge">🚶 2.4 KM ROUTE</span>
             </div>
           </div>
 
-          <!-- 3 Spots Proximity & Check-In List -->
+          <!-- 3 Spots Proximity & Photo Verification List -->
           <div id="spots-list" class="spots-list-container">
             <!-- Dynamically populated -->
           </div>
 
-          <!-- Direct Optimal Google Maps Walking Route Link -->
-          <a id="btn-google-route" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-main-route">
-            <span class="route-icon">🚶</span>
-            <span id="route-text" class="route-label">TRASA PIESZA (GOOGLE MAPS)</span>
-          </a>
-
-          <!-- Secondary Actions -->
-          <div class="secondary-actions">
-            <button id="btn-reroll-daily" class="pixel-btn pixel-btn-secondary" title="Losuj nowe 3 punkty">
-              <span>🎲</span> <span id="reroll-text">NOWE 3 PUNKTY</span>
-            </button>
-            <button id="btn-copy-coords" class="pixel-btn pixel-btn-secondary" title="Kopiuj współrzędne">
-              <span>📋</span> <span id="copy-text">KOPIUJ</span>
-            </button>
-            <a id="btn-apple-maps" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-secondary" title="Apple Maps">
-              <span>🍏</span> <span>APPLE</span>
+          <!-- Built-in & External Navigation Options -->
+          <div class="navigation-actions">
+            <a id="btn-google-route" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-main-route">
+              <span class="route-icon">🗺️</span>
+              <span id="route-text" class="route-label">OPEN GOOGLE MAPS</span>
             </a>
-            <a id="btn-yandex-maps" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn pixel-btn-secondary" title="Yandex Maps">
-              <span>🟡</span> <span>YANDEX</span>
-            </a>
+            <button id="btn-reroll-daily" class="pixel-btn pixel-btn-secondary" title="Roll new 3 spots">
+              <span>🎲</span> <span>NEW 3 SPOTS</span>
+            </button>
           </div>
         </div>
 
-        <!-- Initial Roll Card -->
+        <!-- Initial One-Click Walk Card -->
         <div id="initial-card" class="pixel-card initial-card">
           <div class="initial-card-body">
-            <h2 id="initial-title" class="initial-title">🎯 3 PUNKTY DNIA</h2>
-            <p id="initial-subtitle" class="initial-subtitle">Odwiedź wszystkie 3 punkty w odległości do 21 m, aby powiększyć swój Streak!</p>
+            <h2 id="initial-title" class="initial-title">🎯 TODAY'S 3 WALK DESTINATIONS</h2>
+            <p id="initial-subtitle" class="initial-subtitle">1 click to generate 3 secret spots within 2 km. Arrive within 21 m and take a verification photo to keep your streak!</p>
           </div>
           <button id="btn-generate-daily" class="pixel-btn pixel-btn-roll">
             <span class="dice-icon">🎲</span>
-            <span id="btn-roll-text">WYLOSUJ 3 PUNKTY DNIA</span>
+            <span id="btn-roll-text">START TODAY'S 3-SPOT WALK</span>
           </button>
         </div>
 
       </div>
     </div>
 
-    <!-- City Selection Modal -->
-    <div id="modal-city" class="modal-overlay">
-      <div class="modal-card pixel-modal">
-        <div class="modal-header">
-          <h3 id="city-modal-title" class="modal-title">WSKAŻ MIASTO W JEGO JĘZYKU</h3>
-          <p id="city-modal-subtitle" class="modal-subtitle">Wybierz miasto lub wyszukaj:</p>
-          <button id="modal-city-close" class="pixel-close-btn" aria-label="Zamknij">✕</button>
+    <!-- Passkey Biometric Lock Screen Overlay -->
+    <div id="passkey-lock-overlay" class="auth-lock-overlay">
+      <div class="auth-lock-card pixel-card">
+        <div class="lock-brand">
+          <span class="lock-icon">🕹️</span>
+          <h2 class="lock-title">DOKĄD? PRIVATE</h2>
+          <p class="lock-subtitle">Passkey Biometric Protection</p>
         </div>
-        <div class="modal-body">
-          <div class="city-search-box">
-            <input type="text" id="city-search-input" class="pixel-input" placeholder="Wpisz miasto..." />
-            <button id="city-search-btn" class="pixel-btn pixel-btn-search">SZUKAJ</button>
-          </div>
 
-          <div class="pixel-section-label" id="featured-cities-label">
-            DOSTĘPNE MIASTA:
-          </div>
+        <div id="passkey-status-msg" class="passkey-status">
+          INITIALIZING...
+        </div>
 
-          <div id="featured-cities-grid" class="city-grid">
-            <!-- Dynamically populated -->
-          </div>
+        <div id="passkey-register-prompt" class="passkey-action-group" style="display: none;">
+          <button id="btn-passkey-register" class="pixel-btn pixel-btn-roll">
+            <span>🔑</span> <span>SET UP PASSKEY</span>
+          </button>
+          <p class="passkey-help-text">Use Touch ID, Face ID, or Device PIN to protect your daily memories.</p>
+        </div>
 
-          <div id="search-status-msg" style="display: none;" class="pixel-search-status">
-          </div>
+        <div id="passkey-unlock-prompt" class="passkey-action-group" style="display: none;">
+          <button id="btn-passkey-unlock" class="pixel-btn pixel-btn-roll">
+            <span>👆</span> <span>UNLOCK WITH PASSKEY</span>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Info / About Modal -->
-    <div id="modal-info" class="modal-overlay">
-      <div class="modal-card pixel-modal">
+    <!-- BeReal-Style Photo Verification Camera Modal -->
+    <div id="modal-camera" class="modal-overlay">
+      <div class="modal-card pixel-modal camera-modal-card">
         <div class="modal-header">
-          <h3 class="modal-title">DOKĄD? / PIXEL DAILY EDITION</h3>
-          <p class="modal-subtitle">3 losowe miejsca dziennie w granicach miast</p>
-          <button id="modal-info-close" class="pixel-close-btn" aria-label="Zamknij">✕</button>
+          <h3 id="camera-modal-title" class="modal-title">📸 VERIFICATION PHOTO</h3>
+          <button id="modal-camera-close" class="pixel-close-btn" aria-label="Close">✕</button>
         </div>
-        <div class="modal-body pixel-info-text">
-          <p><strong>🎯 3 PUNKTY DZIENNIE:</strong> Każdego dnia generowane są 3 nowe punkty ściśle w oficjalnych granicach wybranego miasta.</p>
-          <div style="height: 10px;"></div>
-          <p><strong>🔥 SYSTEM STREAK & 21M:</strong> Podejdź na odległość do 21 metrów do każdego punktu i kliknij Odmelduj. Ukończ wszystkie 3, aby budować codzienny streak!</p>
-          <div style="height: 10px;"></div>
-          <p><strong>🚶 OPTYMALNA TRASA:</strong> Aplikacja układa najkrótszą kolejność odwiedzin i otwiera gotową trasę w Google Maps.</p>
-          <div style="height: 10px;"></div>
-          <p><strong>🌐 JĘZYK MIASTA:</strong> Język automatycznie zmienia się na język kraju wybranego miasta.</p>
+        <div class="modal-body camera-modal-body">
+          
+          <div id="camera-viewfinder-container" class="camera-viewfinder-container">
+            <div class="video-wrapper">
+              <video id="camera-video" playsinline autoplay muted></video>
+              <div class="viewfinder-crosshair"></div>
+            </div>
+
+            <div class="camera-controls">
+              <button id="btn-camera-switch" class="pixel-btn pixel-btn-secondary" title="Flip Camera">
+                <span>🔄</span>
+              </button>
+              <button id="btn-camera-capture" class="pixel-btn pixel-btn-shutter" title="Take Photo">
+                <div class="shutter-inner"></div>
+              </button>
+              <label for="camera-file-input" class="pixel-btn pixel-btn-secondary" title="Upload Photo">
+                <span>📁</span>
+              </label>
+              <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="display: none;" />
+            </div>
+          </div>
+
+          <div id="camera-preview-container" class="camera-preview-container" style="display: none;">
+            <div class="preview-img-wrapper">
+              <img id="camera-preview-img" alt="Captured spot verification" />
+            </div>
+            <div class="preview-actions">
+              <button id="btn-camera-retake" class="pixel-btn pixel-btn-secondary">
+                <span>🔄 RETAKE</span>
+              </button>
+              <button id="btn-camera-confirm" class="pixel-btn pixel-btn-confirm">
+                <span>✅ CONFIRM & VERIFY</span>
+              </button>
+            </div>
+          </div>
+
+          <canvas id="camera-canvas" style="display: none;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- BeReal-Style Memories Calendar Modal -->
+    <div id="modal-calendar" class="modal-overlay">
+      <div class="modal-card pixel-modal calendar-modal-card">
+        <div class="modal-header">
+          <div class="calendar-header-nav">
+            <button id="btn-calendar-prev" class="pixel-btn pixel-btn-sm">◀</button>
+            <h3 id="calendar-month-title" class="modal-title">AUGUST 2026</h3>
+            <button id="btn-calendar-next" class="pixel-btn pixel-btn-sm">▶</button>
+          </div>
+          <button id="modal-calendar-close" class="pixel-close-btn" aria-label="Close">✕</button>
+        </div>
+
+        <div class="modal-body calendar-modal-body">
+          <div class="calendar-weekdays">
+            <span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span><span>SU</span>
+          </div>
+          <div id="calendar-grid-days" class="calendar-grid-days">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Day Photo Memories Section -->
+          <div id="day-memories-container" class="day-memories-container">
+            <h4 id="day-memories-title" class="day-memories-title">📅 MEMORIES</h4>
+            <div id="day-memories-list" class="day-memories-list">
+              <!-- Dynamically populated photo cards -->
+            </div>
+          </div>
         </div>
       </div>
     </div>
