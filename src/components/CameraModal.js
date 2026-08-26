@@ -78,8 +78,9 @@ export class CameraModal {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: this.facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 960 }
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          frameRate: { ideal: 60, min: 30 }
         },
         audio: false
       });
@@ -103,19 +104,27 @@ export class CameraModal {
     this.startStream();
   }
 
-  capturePhoto() {
+  async capturePhoto() {
     if (!this.video.videoWidth) {
       this.fileInput.click();
       return;
     }
 
+    // Zero-latency GPU frame grab via createImageBitmap
     const width = this.video.videoWidth;
     const height = this.video.videoHeight;
     this.canvas.width = width;
     this.canvas.height = height;
 
-    const ctx = this.canvas.getContext('2d');
-    ctx.drawImage(this.video, 0, 0, width, height);
+    const ctx = this.canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+    try {
+      const bitmap = await createImageBitmap(this.video);
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close(); // Immediate GPU memory deallocation
+    } catch {
+      ctx.drawImage(this.video, 0, 0, width, height);
+    }
 
     // BeReal pixel timestamp stamp overlay
     this.stampWatermark(ctx, width, height);

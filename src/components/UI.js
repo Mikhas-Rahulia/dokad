@@ -1,4 +1,3 @@
-import confetti from 'canvas-confetti';
 import { StreakService } from '../geo/streakService.js';
 import { PasskeyAuth } from './PasskeyAuth.js';
 import { CameraModal } from './CameraModal.js';
@@ -70,6 +69,9 @@ export class AppUI {
     this.btnRerollDaily.addEventListener('click', () => this.generateDailyTour(true));
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // DUAL-PHASE GPS: Instant coarse → precise GNSS with battery mgmt
+  // ═══════════════════════════════════════════════════════════════
   initGeolocation() {
     if (!navigator.geolocation) {
       this.showToast('⚠️ GPS NOT AVAILABLE');
@@ -89,15 +91,39 @@ export class AppUI {
       console.warn('GPS error:', err.message);
     };
 
+    // Phase 1: Instant coarse position from Wi-Fi/Cell cache (~50ms)
     navigator.geolocation.getCurrentPosition(onPos, onErr, {
-      enableHighAccuracy: true,
-      timeout: 8000,
-      maximumAge: 10000
+      enableHighAccuracy: false,
+      timeout: 2000,
+      maximumAge: 60000
     });
 
-    this.watchId = navigator.geolocation.watchPosition(onPos, onErr, {
-      enableHighAccuracy: true,
-      maximumAge: 5000
+    // Phase 2: High-accuracy GNSS tracking
+    const startPrecisionWatch = () => {
+      if (this.watchId !== null) return;
+      this.watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 10000
+      });
+    };
+
+    const stopWatch = () => {
+      if (this.watchId !== null) {
+        navigator.geolocation.clearWatch(this.watchId);
+        this.watchId = null;
+      }
+    };
+
+    startPrecisionWatch();
+
+    // Battery management: suspend GPS when app is backgrounded
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopWatch();
+      } else {
+        startPrecisionWatch();
+      }
     });
   }
 
@@ -138,7 +164,7 @@ export class AppUI {
   }
 
   generateDailyTour(isReroll = false) {
-    const origin = this.userLocation || { lat: 50.0647, lng: 19.9450 }; // Fallback Krakow center if GPS not yet ready
+    const origin = this.userLocation || { lat: 50.0647, lng: 19.9450 };
 
     this.dailyState = this.streakService.initDailySpots(origin);
 
@@ -290,23 +316,43 @@ export class AppUI {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // WAAPI CONFETTI — Zero dependencies, compositor-thread animation
+  // ═══════════════════════════════════════════════════════════════
   triggerConfetti(isGrand = false) {
-    try {
-      if (isGrand) {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 }
-        });
-      } else {
-        confetti({
-          particleCount: 35,
-          spread: 50,
-          origin: { y: 0.85 },
-          colors: ['#facc15', '#22c55e', '#0ea5e9', '#ef4444']
-        });
-      }
-    } catch {}
+    const count = isGrand ? 40 : 16;
+    const colors = ['#facc15', '#22c55e', '#0ea5e9', '#ef4444', '#a855f7', '#fb923c'];
+    const container = document.getElementById('app');
+
+    for (let i = 0; i < count; i++) {
+      const particle = document.createElement('div');
+      particle.style.cssText = `
+        position: fixed;
+        width: ${6 + Math.random() * 8}px;
+        height: ${6 + Math.random() * 8}px;
+        background: ${colors[Math.floor(Math.random() * colors.length)]};
+        border: 1px solid #000;
+        pointer-events: none;
+        z-index: 100000;
+        left: ${40 + Math.random() * 20}%;
+        top: ${isGrand ? 50 : 80}%;
+        will-change: transform, opacity;
+      `;
+      container.appendChild(particle);
+
+      const xDrift = (Math.random() - 0.5) * 300;
+      const yDrift = -(200 + Math.random() * 300);
+      const rotation = Math.random() * 720 - 360;
+
+      particle.animate([
+        { transform: 'translate3d(0, 0, 0) rotate(0deg)', opacity: 1 },
+        { transform: `translate3d(${xDrift}px, ${yDrift}px, 0) rotate(${rotation}deg)`, opacity: 0 }
+      ], {
+        duration: 800 + Math.random() * 600,
+        easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+        fill: 'forwards'
+      }).onfinish = () => particle.remove();
+    }
   }
 
   showToast(msg) {

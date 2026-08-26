@@ -10,13 +10,12 @@
     "test": "node test/geo-test.js",
     "deploy": "vite build && gh-pages -d dist"
   },
-  "dependencies": {
-    "canvas-confetti": "^1.9.4",
-    "leaflet": "^1.9.4"
-  },
   "devDependencies": {
     "gh-pages": "^6.3.0",
     "playwright": "^1.62.1",
     "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "maplibre-gl": "^6.6.0"
   }
 }

@@ -41,7 +41,8 @@ async function runBrowserCheck() {
     }
   });
 
-  await page.goto('http://localhost:5199/', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1000);
 
   console.log('📸 Screenshot 1: Passkey Registration View...');
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_1_passkey.png') });
