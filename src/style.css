@@ -81,6 +81,10 @@ html, body {
   z-index: 1;
 }
 
+[data-theme="dark"] #map .leaflet-tile {
+  filter: brightness(0.65) invert(1) contrast(2.4) hue-rotate(200deg) saturate(0.4) brightness(0.75);
+}
+
 /* CRT Scanline overlay */
 .pixel-scanline-overlay {
   position: absolute;

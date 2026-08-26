@@ -46,13 +46,11 @@ export class MapController {
       this.map.removeLayer(this.tileLayer);
     }
 
-    const tileUrl = isDark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     this.tileLayer = L.tileLayer(tileUrl, {
-      subdomains: 'abcd',
-      maxZoom: 19
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(this.map);
   }
 
