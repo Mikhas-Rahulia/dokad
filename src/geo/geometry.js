@@ -1,7 +1,180 @@
 /**
- * Geospatial computations: Haversine distance, uniform 2km random sampling,
- * TSP optimal route solver, 100m arrival proximity verification, and Google Maps URL generation.
+ * Geospatial computations: Ray-casting Point-in-Polygon,
+ * strict city boundary sampling of 3 daily spots, TSP optimal route solver,
+ * 100m proximity arrival check, and walking navigation URLs.
  */
+
+/**
+ * Checks if a point [lng, lat] is inside a GeoJSON Polygon ring (array of coordinates).
+ * Uses ray-casting algorithm.
+ * @param {[number, number]} point [lng, lat]
+ * @param {Array<[number, number]>} ring Array of [lng, lat]
+ * @returns {boolean}
+ */
+export function pointInRing(point, ring) {
+  const x = point[0];
+  const y = point[1];
+  let inside = false;
+
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+
+    const intersect = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+
+  return inside;
+}
+
+/**
+ * Checks if a point is inside a single GeoJSON Polygon (outer boundary minus inner holes).
+ * @param {[number, number]} point [lng, lat]
+ * @param {Array<Array<[number, number]>>} polygonCoords Array of linear rings
+ * @returns {boolean}
+ */
+export function pointInPolygonGeometry(point, polygonCoords) {
+  if (!polygonCoords || polygonCoords.length === 0) return false;
+  // Outer ring
+  const inOuter = pointInRing(point, polygonCoords[0]);
+  if (!inOuter) return false;
+
+  // Inner rings (holes)
+  for (let i = 1; i < polygonCoords.length; i++) {
+    if (pointInRing(point, polygonCoords[i])) {
+      return false; // Inside a hole
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Checks if a point [lng, lat] is inside a GeoJSON Polygon or MultiPolygon.
+ * @param {[number, number]} point [lng, lat]
+ * @param {Object} geojson GeoJSON geometry or Feature
+ * @returns {boolean}
+ */
+export function isPointInCity(point, geojson) {
+  if (!geojson) return false;
+  const geometry = geojson.type === 'Feature' ? geojson.geometry : geojson;
+
+  if (geometry.type === 'Polygon') {
+    return pointInPolygonGeometry(point, geometry.coordinates);
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const poly of geometry.coordinates) {
+      if (pointInPolygonGeometry(point, poly)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  return false;
+}
+
+/**
+ * Computes bounding box [minLng, minLat, maxLng, maxLat] from GeoJSON
+ * @param {Object} geojson
+ * @returns {[number, number, number, number]}
+ */
+export function getBoundingBox(geojson) {
+  const geometry = geojson.type === 'Feature' ? geojson.geometry : geojson;
+  let minLng = Infinity;
+  let minLat = Infinity;
+  let maxLng = -Infinity;
+  let maxLat = -Infinity;
+
+  function updateBounds(coord) {
+    const lng = coord[0];
+    const lat = coord[1];
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+
+  function traverse(coords) {
+    if (typeof coords[0] === 'number') {
+      updateBounds(coords);
+    } else {
+      coords.forEach(traverse);
+    }
+  }
+
+  traverse(geometry.coordinates);
+  return [minLng, minLat, maxLng, maxLat];
+}
+
+/**
+ * Generates a random point [lat, lng] strictly within the city's polygon boundaries.
+ * @param {Object} geojson GeoJSON Polygon or MultiPolygon
+ * @param {number} maxAttempts Maximum rejection sampling attempts
+ * @returns {{lat: number, lng: number}}
+ */
+export function getRandomPointInCity(geojson, maxAttempts = 2000) {
+  const bbox = getBoundingBox(geojson);
+  const [minLng, minLat, maxLng, maxLat] = bbox;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const randLng = minLng + Math.random() * (maxLng - minLng);
+    const randLat = minLat + Math.random() * (maxLat - minLat);
+    const point = [randLng, randLat];
+
+    if (isPointInCity(point, geojson)) {
+      return {
+        lat: Number(randLat.toFixed(6)),
+        lng: Number(randLng.toFixed(6))
+      };
+    }
+  }
+
+  // Fallback: Return center if sampling fails
+  return {
+    lat: Number(((minLat + maxLat) / 2).toFixed(6)),
+    lng: Number(((minLng + maxLng) / 2).toFixed(6))
+  };
+}
+
+/**
+ * Generates 3 random spots strictly inside city boundaries with spacing.
+ * @param {Object} geojson
+ * @param {number} count (default 3)
+ * @returns {Array<{lat: number, lng: number, id: string}>}
+ */
+export function generate3SpotsInCity(geojson, count = 3) {
+  const spots = [];
+  const maxAttempts = 1000;
+  let attempts = 0;
+
+  while (spots.length < count && attempts < maxAttempts) {
+    attempts++;
+    const pt = getRandomPointInCity(geojson);
+    // Ensure not too close to previous spots (at least 150m)
+    const tooClose = spots.some(s => calculateHaversineDistance(s.lat, s.lng, pt.lat, pt.lng) * 1000 < 150);
+    if (!tooClose || attempts > 500) {
+      spots.push({
+        lat: pt.lat,
+        lng: pt.lng,
+        id: `spot_${spots.length + 1}_${Date.now()}`
+      });
+    }
+  }
+
+  while (spots.length < count) {
+    const pt = getRandomPointInCity(geojson);
+    spots.push({
+      lat: pt.lat,
+      lng: pt.lng,
+      id: `spot_${spots.length + 1}_${Date.now()}`
+    });
+  }
+
+  return spots;
+}
 
 /**
  * Calculates geodesic distance between two points using the Haversine formula.
@@ -26,89 +199,7 @@ export function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Formats distance nicely in meters or kilometers.
- * @param {number} distKm
- * @returns {string}
- */
-export function formatDistance(distKm) {
-  if (distKm === null || isNaN(distKm)) return '—';
-  
-  if (distKm < 1.0) {
-    const meters = Math.round(distKm * 1000);
-    return `${meters} m`;
-  }
-
-  const rounded = distKm < 10 ? distKm.toFixed(2) : distKm.toFixed(1);
-  return `${rounded} km`;
-}
-
-/**
- * Generates uniformly distributed random points strictly within radiusKm of center.
- * @param {number} centerLat
- * @param {number} centerLng
- * @param {number} radiusKm (default 2.0 km)
- * @param {number} count (default 3)
- * @param {number} minDistanceBetweenMeters (default 150m to avoid overlapping spots)
- * @returns {Array<{lat: number, lng: number, id: string}>}
- */
-export function generateRandomSpotsInRadius(centerLat, centerLng, radiusKm = 2.0, count = 3, minDistanceBetweenMeters = 150) {
-  const spots = [];
-  const maxAttempts = 500;
-  let attempts = 0;
-
-  while (spots.length < count && attempts < maxAttempts) {
-    attempts++;
-    // Uniform polar area sampling
-    const r = radiusKm * Math.sqrt(Math.random());
-    const theta = Math.random() * 2 * Math.PI;
-
-    const dLat = (r * Math.cos(theta)) / 111.32;
-    const dLng = (r * Math.sin(theta)) / (111.32 * Math.cos(centerLat * (Math.PI / 180)));
-
-    const candidate = {
-      lat: Number((centerLat + dLat).toFixed(6)),
-      lng: Number((centerLng + dLng).toFixed(6))
-    };
-
-    // Ensure candidate is <= radiusKm from center
-    const distToCenter = calculateHaversineDistance(centerLat, centerLng, candidate.lat, candidate.lng);
-    if (distToCenter > radiusKm) continue;
-
-    // Ensure candidate is not too close to center
-    if (distToCenter * 1000 < minDistanceBetweenMeters) continue;
-
-    // Ensure candidate is not too close to previously generated spots
-    const tooClose = spots.some(existing => {
-      const d = calculateHaversineDistance(existing.lat, existing.lng, candidate.lat, candidate.lng);
-      return d * 1000 < minDistanceBetweenMeters;
-    });
-
-    if (!tooClose) {
-      spots.push({
-        ...candidate,
-        id: `spot_${spots.length + 1}_${Date.now()}`
-      });
-    }
-  }
-
-  // If constraints were too tight, backfill without inter-spot distance constraints
-  while (spots.length < count) {
-    const r = radiusKm * Math.sqrt(Math.random());
-    const theta = Math.random() * 2 * Math.PI;
-    const dLat = (r * Math.cos(theta)) / 111.32;
-    const dLng = (r * Math.sin(theta)) / (111.32 * Math.cos(centerLat * (Math.PI / 180)));
-    spots.push({
-      lat: Number((centerLat + dLat).toFixed(6)),
-      lng: Number((centerLng + dLng).toFixed(6)),
-      id: `spot_${spots.length + 1}_${Date.now()}`
-    });
-  }
-
-  return spots;
-}
-
-/**
- * Solves the Traveling Salesperson shortest path starting from origin and visiting all 3 spots.
+ * Solves Traveling Salesperson shortest path starting from origin and visiting all 3 spots.
  * @param {{lat: number, lng: number}} origin
  * @param {Array<{lat: number, lng: number}>} spots (array of 3 points)
  * @returns {{orderedSpots: Array<Object>, totalDistanceKm: number, legs: Array<number>}}
@@ -120,10 +211,9 @@ export function solveOptimalRoute(origin, spots) {
 
   if (spots.length === 1) {
     const dist = calculateHaversineDistance(origin.lat, origin.lng, spots[0].lat, spots[0].lng);
-    return { orderedSpots: [spots[0]], totalDistanceKm: dist, legs: [dist] };
+    return { orderedSpots: [{ ...spots[0], step: 1 }], totalDistanceKm: dist, legs: [dist] };
   }
 
-  // For N=3, generate all 6 permutations:
   const permutations = [
     [0, 1, 2],
     [0, 2, 1],
@@ -186,31 +276,87 @@ export function checkProximity(userLat, userLng, spotLat, spotLng, maxDistMeters
 }
 
 /**
- * Builds Google Maps walking route URL for multi-stop navigation.
- * Uses official universal Google Maps Dir API format.
- * @param {{lat: number, lng: number}} origin
- * @param {Array<{lat: number, lng: number}>} orderedSpots (3 spots in optimal order)
- * @param {string} mode ('walking' | 'bicycling' | 'driving')
+ * Formats distance nicely in local units
+ * @param {number} distKm
+ * @param {string} lang
  * @returns {string}
  */
-export function getGoogleMapsOptimalRouteUrl(origin, orderedSpots, mode = 'walking') {
+export function formatDistance(distKm, lang = 'ru') {
+  if (distKm === null || isNaN(distKm)) return '—';
+  
+  if (distKm < 1.0) {
+    const meters = Math.round(distKm * 1000);
+    switch (lang) {
+      case 'pl': return `${meters} m`;
+      case 'be': return `${meters} м`;
+      case 'nl': return `${meters} m`;
+      case 'en': return `${meters} m (${Math.round(meters * 3.28084)} ft)`;
+      case 'ru':
+      default:
+        return `${meters} м`;
+    }
+  }
+
+  const rounded = distKm < 10 ? distKm.toFixed(1) : Math.round(distKm).toString();
+  switch (lang) {
+    case 'pl': return `${rounded} km`;
+    case 'be': return `${rounded} км`;
+    case 'nl': return `${rounded} km`;
+    case 'en': return `${rounded} km (${(distKm * 0.621371).toFixed(1)} mi)`;
+    case 'ru':
+    default:
+      return `${rounded} км`;
+  }
+}
+
+/**
+ * Builds Google Maps walking route URL for multi-stop navigation.
+ * @param {{lat: number, lng: number}} origin
+ * @param {Array<{lat: number, lng: number}>} orderedSpots (3 spots in optimal order)
+ * @returns {string}
+ */
+export function getGoogleMapsOptimalRouteUrl(origin, orderedSpots) {
   if (!orderedSpots || orderedSpots.length === 0) return '#';
 
   const origStr = `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`;
 
   if (orderedSpots.length === 1) {
     const destStr = `${orderedSpots[0].lat.toFixed(6)},${orderedSpots[0].lng.toFixed(6)}`;
-    return `https://www.google.com/maps/dir/?api=1&origin=${origStr}&destination=${destStr}&travelmode=${mode}`;
+    return `https://www.google.com/maps/dir/?api=1&origin=${origStr}&destination=${destStr}&travelmode=walking`;
   }
 
   const destination = orderedSpots[orderedSpots.length - 1];
   const destStr = `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`;
 
-  // Waypoints are all spots except the final destination
   const waypoints = orderedSpots.slice(0, orderedSpots.length - 1);
   const waypointsStr = waypoints
     .map(sp => `${sp.lat.toFixed(6)},${sp.lng.toFixed(6)}`)
-    .join('%7C'); // Encoded pipe |
+    .join('%7C');
 
-  return `https://www.google.com/maps/dir/?api=1&origin=${origStr}&destination=${destStr}&waypoints=${waypointsStr}&travelmode=${mode}`;
+  return `https://www.google.com/maps/dir/?api=1&origin=${origStr}&destination=${destStr}&waypoints=${waypointsStr}&travelmode=walking`;
+}
+
+/**
+ * Generates Apple Maps URL
+ * @param {number} destLat
+ * @param {number} destLng
+ * @returns {string}
+ */
+export function getAppleMapsUrl(destLat, destLng) {
+  return `https://maps.apple.com/?daddr=${destLat.toFixed(6)},${destLng.toFixed(6)}&dirflg=w`;
+}
+
+/**
+ * Generates Yandex Maps URL
+ * @param {number|null} originLat
+ * @param {number|null} originLng
+ * @param {number} destLat
+ * @param {number} destLng
+ * @returns {string}
+ */
+export function getYandexMapsUrl(originLat, originLng, destLat, destLng) {
+  const rtext = originLat !== null && originLng !== null
+    ? `~${originLat.toFixed(6)},${originLng.toFixed(6)}~${destLat.toFixed(6)},${destLng.toFixed(6)}`
+    : `~${destLat.toFixed(6)},${destLng.toFixed(6)}`;
+  return `https://yandex.ru/maps/?rtext=${rtext}&rtt=pd`;
 }

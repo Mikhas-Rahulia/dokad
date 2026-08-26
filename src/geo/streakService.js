@@ -1,11 +1,11 @@
 import {
-  generateRandomSpotsInRadius,
+  generate3SpotsInCity,
   solveOptimalRoute,
   checkProximity
 } from './geometry.js';
 
-const STORAGE_KEY_DAILY = 'dokad_daily_state_v2';
-const STORAGE_KEY_STREAK = 'dokad_streak_stats_v2';
+const STORAGE_KEY_DAILY = 'dokad_daily_state_v3';
+const STORAGE_KEY_STREAK = 'dokad_streak_stats_v3';
 
 export class StreakService {
   constructor() {
@@ -25,10 +25,6 @@ export class StreakService {
     return this.getTodayDateString(d);
   }
 
-  /**
-   * Loads streak stats and validates streak continuity.
-   * @returns {{currentStreak: number, lastCompletedDate: string|null, totalCompletedDays: number}}
-   */
   getStreakStats() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_STREAK);
@@ -59,19 +55,16 @@ export class StreakService {
     }
   }
 
-  /**
-   * Loads or returns current daily state for today.
-   * @returns {Object|null}
-   */
-  getDailyState() {
+  getDailyState(cityId = null) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_DAILY);
       if (!raw) return null;
       const state = JSON.parse(raw);
       if (state.date === this.getTodayDateString()) {
-        return state;
+        if (!cityId || state.cityId === cityId) {
+          return state;
+        }
       }
-      // Outdated day state
       return null;
     } catch {
       return null;
@@ -87,12 +80,13 @@ export class StreakService {
   }
 
   /**
-   * Creates a new set of 3 daily spots within 2 km of origin and solves optimal path.
+   * Initializes 3 daily spots strictly inside the city boundary.
    * @param {{lat: number, lng: number}} origin
+   * @param {Object} city
    * @returns {Object}
    */
-  initDailySpots(origin) {
-    const rawSpots = generateRandomSpotsInRadius(origin.lat, origin.lng, 2.0, 3, 150);
+  initDailySpots(origin, city) {
+    const rawSpots = generate3SpotsInCity(city.geojson, 3);
     const { orderedSpots, totalDistanceKm, legs } = solveOptimalRoute(origin, rawSpots);
 
     const spotsWithStatus = orderedSpots.map((spot, idx) => ({
@@ -104,6 +98,8 @@ export class StreakService {
 
     const dailyState = {
       date: this.getTodayDateString(),
+      cityId: city.id,
+      cityName: city.nativeName || city.name,
       origin: { lat: origin.lat, lng: origin.lng },
       spots: spotsWithStatus,
       totalDistanceKm,
@@ -141,11 +137,9 @@ export class StreakService {
       };
     }
 
-    // Mark checked in!
     spot.checkedIn = true;
     spot.checkedInAt = new Date().toISOString();
 
-    // Check if all 3 spots are checked in
     const allDone = state.spots.every(s => s.checkedIn);
     let streakCount = this.getStreakStats().currentStreak;
 
