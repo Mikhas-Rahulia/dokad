@@ -20,8 +20,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   
-  <script type="module" crossorigin src="./assets/index-DgEQt4wO.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-C9-iPD3r.css">
+  <script type="module" crossorigin src="./assets/index-ESIzlmwt.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BxbA1NTy.css">
 </head>
 <body>
   <div id="app" class="pixel-app">
@@ -117,13 +117,31 @@
           <button id="btn-passkey-register" class="pixel-btn pixel-btn-roll">
             <span>🔑</span> <span>SET UP PASSKEY</span>
           </button>
-          <p class="passkey-help-text">Use Touch ID, Face ID, or Device PIN to protect your daily memories.</p>
+          <button id="btn-enter-key-mode" class="pixel-btn pixel-btn-secondary">
+            <span>⌨️</span> <span>ENTER / PASTE ACCESS KEY</span>
+          </button>
+          <p class="passkey-help-text">Use Touch ID, Face ID, Windows Hello, or paste your Universal Access Key.</p>
         </div>
 
         <div id="passkey-unlock-prompt" class="passkey-action-group" style="display: none;">
           <button id="btn-passkey-unlock" class="pixel-btn pixel-btn-roll">
             <span>👆</span> <span>UNLOCK WITH PASSKEY</span>
           </button>
+          <button id="btn-enter-key-mode" class="pixel-btn pixel-btn-secondary" onclick="document.getElementById('passkey-unlock-prompt').style.display='none';document.getElementById('passkey-key-input-prompt').style.display='flex';">
+            <span>⌨️</span> <span>USE ACCESS KEY INSTEAD</span>
+          </button>
+        </div>
+
+        <div id="passkey-key-input-prompt" class="passkey-action-group" style="display: none;">
+          <input type="text" id="input-access-key" class="pixel-input" placeholder="DOKAD-XXXX-XXXX-XXXX" autocomplete="off" />
+          <button id="btn-submit-access-key" class="pixel-btn pixel-btn-roll">
+            <span>🔓</span> <span>UNLOCK WITH KEY</span>
+          </button>
+          <div class="active-key-info">
+            <span>YOUR ACTIVE KEY:</span>
+            <code id="active-access-key-display">DOKAD-XXXX-XXXX-XXXX</code>
+            <button id="btn-copy-access-key" class="pixel-btn pixel-btn-sm">📋 COPY KEY</button>
+          </div>
         </div>
       </div>
     </div>
