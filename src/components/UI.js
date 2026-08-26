@@ -1,131 +1,80 @@
 import confetti from 'canvas-confetti';
-import { t } from '../i18n/translations.js';
 import { StreakService } from '../geo/streakService.js';
+import { PasskeyAuth } from './PasskeyAuth.js';
+import { CameraModal } from './CameraModal.js';
+import { CalendarModal } from './CalendarModal.js';
 import {
   formatDistance,
   checkProximity,
-  getGoogleMapsOptimalRouteUrl,
-  getAppleMapsUrl,
-  getYandexMapsUrl
+  getGoogleMapsOptimalRouteUrl
 } from '../geo/geometry.js';
 
 export class AppUI {
-  constructor({ cityService, mapController }) {
-    this.cityService = cityService;
+  constructor({ mapController }) {
     this.map = mapController;
     this.streakService = new StreakService();
 
-    this.currentCity = this.cityService.currentCity;
-    this.currentLang = this.currentCity.lang || 'pl';
     this.userLocation = null;
     this.dailyState = null;
-    this.deferredInstallPrompt = null;
-    this.isDark = localStorage.getItem('dokad_theme') === 'dark';
+    this.watchId = null;
 
     this.cacheElements();
+    this.initComponents();
     this.bindEvents();
-    this.initPWAInstall();
-    this.applyTheme(this.isDark);
-    this.updateLanguageUI();
-    this.loadInitialCity();
+    this.updateStreakBadge();
     this.initGeolocation();
+    this.loadTodayTour();
   }
 
   cacheElements() {
     // Header
-    this.btnSelectCity = document.getElementById('btn-select-city');
-    this.headerCityFlag = document.getElementById('header-city-flag');
-    this.headerCityName = document.getElementById('header-city-name');
     this.streakCountEl = document.getElementById('streak-count');
-    this.btnThemeToggle = document.getElementById('btn-theme-toggle');
-    this.themeIcon = document.getElementById('theme-icon');
-    this.btnInfo = document.getElementById('btn-info');
-    this.btnInstallPWA = document.getElementById('btn-install-pwa');
-
-    // Map controls
     this.btnLocateMe = document.getElementById('btn-locate-me');
-    this.btnRecenterCity = document.getElementById('btn-recenter-city');
+    this.btnOpenCalendar = document.getElementById('btn-open-calendar');
 
     // Cards
     this.initialCard = document.getElementById('initial-card');
-    this.initialTitle = document.getElementById('initial-title');
-    this.initialSubtitle = document.getElementById('initial-subtitle');
     this.btnGenerateDaily = document.getElementById('btn-generate-daily');
-    this.btnRollText = document.getElementById('btn-roll-text');
 
     this.tourCard = document.getElementById('tour-card');
     this.tourProgressBadge = document.getElementById('tour-progress-badge');
     this.tourDistanceBadge = document.getElementById('tour-distance-badge');
     this.spotsList = document.getElementById('spots-list');
     this.btnGoogleRoute = document.getElementById('btn-google-route');
-    this.routeText = document.getElementById('route-text');
     this.btnRerollDaily = document.getElementById('btn-reroll-daily');
-    this.rerollText = document.getElementById('reroll-text');
-    this.btnCopyCoords = document.getElementById('btn-copy-coords');
-    this.copyText = document.getElementById('copy-text');
-    this.btnAppleMaps = document.getElementById('btn-apple-maps');
-    this.btnYandexMaps = document.getElementById('btn-yandex-maps');
-
-    // City Modal
-    this.modalCity = document.getElementById('modal-city');
-    this.modalCityClose = document.getElementById('modal-city-close');
-    this.cityModalTitle = document.getElementById('city-modal-title');
-    this.cityModalSubtitle = document.getElementById('city-modal-subtitle');
-    this.citySearchInput = document.getElementById('city-search-input');
-    this.citySearchBtn = document.getElementById('city-search-btn');
-    this.featuredCitiesLabel = document.getElementById('featured-cities-label');
-    this.featuredCitiesGrid = document.getElementById('featured-cities-grid');
-    this.searchStatusMsg = document.getElementById('search-status-msg');
-
-    // Info Modal
-    this.modalInfo = document.getElementById('modal-info');
-    this.modalInfoClose = document.getElementById('modal-info-close');
 
     // Toast
     this.toast = document.getElementById('toast');
   }
 
+  initComponents() {
+    this.cameraModal = new CameraModal();
+    this.calendarModal = new CalendarModal(this.streakService);
+    this.passkeyAuth = new PasskeyAuth(() => {
+      this.showToast('🔓 DOKĄD UNLOCKED');
+      if (this.userLocation) {
+        this.map.recenterUser();
+      }
+    });
+  }
+
   bindEvents() {
-    // City selection modal
-    this.btnSelectCity.addEventListener('click', () => this.openCityModal());
-    this.modalCityClose.addEventListener('click', () => this.closeCityModal());
-    this.modalCity.addEventListener('click', (e) => {
-      if (e.target === this.modalCity) this.closeCityModal();
-    });
-
-    // Info modal
-    this.btnInfo.addEventListener('click', () => this.openInfoModal());
-    this.modalInfoClose.addEventListener('click', () => this.closeInfoModal());
-    this.modalInfo.addEventListener('click', (e) => {
-      if (e.target === this.modalInfo) this.closeInfoModal();
-    });
-
-    // Theme toggle
-    this.btnThemeToggle.addEventListener('click', () => this.toggleTheme());
-
-    // Map controls
+    // Locate GPS
     this.btnLocateMe.addEventListener('click', () => this.centerOnUser());
-    this.btnRecenterCity.addEventListener('click', () => this.map.recenter());
 
-    // Generate & Reroll 3 spots
+    // Open Calendar Memories
+    this.btnOpenCalendar.addEventListener('click', () => this.calendarModal.open());
+
+    // Generate & Reroll 3 daily spots
     this.btnGenerateDaily.addEventListener('click', () => this.generateDailyTour());
     this.btnRerollDaily.addEventListener('click', () => this.generateDailyTour(true));
-
-    // Copy coords
-    this.btnCopyCoords.addEventListener('click', () => this.copyCoordinates());
-
-    // City search
-    this.citySearchBtn.addEventListener('click', () => this.handleCitySearch());
-    this.citySearchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.handleCitySearch();
-    });
-
-    // PWA install button
-    this.btnInstallPWA.addEventListener('click', () => this.promptPWAInstall());
   }
 
   initGeolocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      this.showToast('⚠️ GPS NOT AVAILABLE');
+      return;
+    }
 
     const onPos = (pos) => {
       this.userLocation = {
@@ -136,13 +85,17 @@ export class AppUI {
       this.updateSpotsLiveDistances();
     };
 
-    navigator.geolocation.getCurrentPosition(onPos, (err) => console.warn(err.message), {
+    const onErr = (err) => {
+      console.warn('GPS error:', err.message);
+    };
+
+    navigator.geolocation.getCurrentPosition(onPos, onErr, {
       enableHighAccuracy: true,
       timeout: 8000,
       maximumAge: 10000
     });
 
-    navigator.geolocation.watchPosition(onPos, (err) => console.warn(err.message), {
+    this.watchId = navigator.geolocation.watchPosition(onPos, onErr, {
       enableHighAccuracy: true,
       maximumAge: 5000
     });
@@ -152,7 +105,7 @@ export class AppUI {
     if (this.userLocation) {
       this.map.recenterUser();
     } else {
-      this.showToast(t('gpsLocating', this.currentLang));
+      this.showToast('📍 LOCATING GPS...');
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           this.userLocation = {
@@ -162,84 +115,9 @@ export class AppUI {
           this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng);
           this.map.recenterUser();
         },
-        () => this.showToast('⚠️ GPS ERROR')
+        () => this.showToast('⚠️ GPS ACCESS REQUIRED')
       );
     }
-  }
-
-  loadInitialCity() {
-    this.selectCity(this.currentCity, false);
-  }
-
-  selectCity(city) {
-    this.currentCity = city;
-    this.cityService.setCurrentCity(city);
-    this.currentLang = city.lang || 'pl';
-
-    // Update Header
-    this.headerCityFlag.textContent = city.flag || '📍';
-    this.headerCityName.textContent = city.nativeName || city.name;
-    document.title = `${city.nativeName || city.name} — ${t('appTitle', this.currentLang)}`;
-
-    // Update Language UI
-    this.updateLanguageUI();
-
-    // Update Map boundary
-    this.map.setCityBoundary(city);
-
-    // Load active daily tour if existing for this city
-    const existing = this.streakService.getDailyState(city.id);
-    if (existing && existing.spots && existing.spots.length === 3) {
-      this.dailyState = existing;
-      this.renderTourUI();
-      this.map.renderDailySpotsAndRoute(existing.origin, existing.spots, (idx) => this.handleCheckIn(idx));
-    } else {
-      this.dailyState = null;
-      this.initialCard.style.display = 'flex';
-      this.tourCard.style.display = 'none';
-    }
-
-    this.updateStreakBadge();
-    this.closeCityModal();
-  }
-
-  updateLanguageUI() {
-    const lang = this.currentLang;
-
-    this.btnRollText.textContent = t('rollButton', lang);
-    this.initialTitle.textContent = t('todayTour', lang);
-    this.initialSubtitle.textContent = t('todayTourSubtitle', lang);
-    this.rerollText.textContent = t('newSpotsButton', lang);
-    this.routeText.textContent = t('routeButtonGoogle', lang);
-    this.copyText.textContent = t('copyCoords', lang);
-
-    this.cityModalTitle.textContent = t('cityPromptTitle', lang);
-    this.cityModalSubtitle.textContent = t('cityPromptSubtitle', lang);
-    this.citySearchInput.placeholder = t('searchPlaceholder', lang);
-    this.citySearchBtn.textContent = t('searchButton', lang);
-    this.featuredCitiesLabel.textContent = t('featuredCities', lang);
-
-    this.renderCityGrid();
-  }
-
-  renderCityGrid() {
-    const allCities = this.cityService.getAllCities();
-    this.featuredCitiesGrid.innerHTML = '';
-
-    allCities.forEach(city => {
-      const card = document.createElement('button');
-      card.className = `city-card ${city.id === this.currentCity.id ? 'active' : ''}`;
-      card.innerHTML = `
-        <span class="city-card-flag">${city.flag || '📍'}</span>
-        <span class="city-card-name">${city.nativeName || city.name}</span>
-        <span class="city-card-lang">${city.country} (${city.langName || city.lang.toUpperCase()})</span>
-      `;
-      card.addEventListener('click', () => {
-        this.selectCity(city);
-        this.showToast(`📍 ${city.nativeName} (${city.country})`);
-      });
-      this.featuredCitiesGrid.appendChild(card);
-    });
   }
 
   updateStreakBadge() {
@@ -247,26 +125,30 @@ export class AppUI {
     this.streakCountEl.textContent = stats.currentStreak || 0;
   }
 
-  generateDailyTour(isReroll = false) {
-    if (!this.currentCity || !this.currentCity.geojson) {
-      this.showToast('BŁĄD: BRAK GRANIC');
-      return;
+  loadTodayTour() {
+    const state = this.streakService.getDailyState();
+    if (state && state.spots && state.spots.length === 3) {
+      this.dailyState = state;
+      this.renderTourUI();
+      this.map.renderDailySpotsAndRoute(state.origin, state.spots, (idx) => this.promptPhotoVerification(idx));
+    } else {
+      this.initialCard.style.display = 'flex';
+      this.tourCard.style.display = 'none';
     }
+  }
 
-    const origin = this.userLocation || {
-      lat: this.currentCity.center ? this.currentCity.center[0] : 50.0647,
-      lng: this.currentCity.center ? this.currentCity.center[1] : 19.9450
-    };
+  generateDailyTour(isReroll = false) {
+    const origin = this.userLocation || { lat: 50.0647, lng: 19.9450 }; // Fallback Krakow center if GPS not yet ready
 
-    this.dailyState = this.streakService.initDailySpots(origin, this.currentCity);
+    this.dailyState = this.streakService.initDailySpots(origin);
 
-    this.map.renderDailySpotsAndRoute(origin, this.dailyState.spots, (idx) => this.handleCheckIn(idx));
+    this.map.renderDailySpotsAndRoute(origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
     this.renderTourUI();
 
-    if ('vibrate' in navigator) navigator.vibrate([25, 40, 25]);
+    if ('vibrate' in navigator) navigator.vibrate([20, 35, 20]);
     this.triggerConfetti();
 
-    this.showToast(isReroll ? '🎲 NOWE 3 PUNKTY!' : '🎯 3 PUNKTY DNIA WYLOSOWANE!');
+    this.showToast(isReroll ? '🎲 3 NEW SPOTS GENERATED!' : "🎯 TODAY'S 3 DESTINATIONS READY!");
   }
 
   renderTourUI() {
@@ -277,11 +159,11 @@ export class AppUI {
 
     const spots = this.dailyState.spots;
     const completedCount = spots.filter(s => s.checkedIn).length;
-    const totalDistStr = formatDistance(this.dailyState.totalDistanceKm, this.currentLang);
+    const totalDistStr = formatDistance(this.dailyState.totalDistanceKm);
 
-    this.tourProgressBadge.textContent = `${completedCount}/3 ${t('completedSpots', this.currentLang)}`;
+    this.tourProgressBadge.textContent = `${completedCount}/3 COMPLETED`;
     this.tourProgressBadge.className = `pixel-badge progress-badge ${completedCount === 3 ? 'all-done' : ''}`;
-    this.tourDistanceBadge.textContent = `🚶 ${totalDistStr} ${t('totalRoute', this.currentLang)}`;
+    this.tourDistanceBadge.textContent = `🚶 ${totalDistStr} ROUTE`;
 
     this.spotsList.innerHTML = '';
 
@@ -292,7 +174,7 @@ export class AppUI {
 
       if (this.userLocation) {
         const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
-        distText = formatDistance(prox.distanceKm, this.currentLang);
+        distText = formatDistance(prox.distanceKm);
         inProximity = prox.inRange;
       }
 
@@ -304,16 +186,16 @@ export class AppUI {
           <div class="spot-details">
             <div class="spot-title">SPOT ${spot.step}</div>
             <div class="spot-distance" id="spot-dist-${idx}">
-              ${isCheckedIn ? `✅ ${t('arrivedBadge', this.currentLang)}` : `📍 ${distText}`}
+              ${isCheckedIn ? '✅ PHOTO VERIFIED' : `📍 ${distText} away`}
             </div>
           </div>
         </div>
         <div class="spot-item-right">
           ${
             isCheckedIn
-              ? `<span class="badge-checked">${t('arrivedBadge', this.currentLang)}</span>`
+              ? `<span class="badge-checked">VERIFIED</span>`
               : `<button class="pixel-btn pixel-btn-checkin ${inProximity ? 'ready' : ''}" data-idx="${idx}">
-                   ${inProximity ? t('checkInReadyBtn', this.currentLang) : t('checkInBtn', this.currentLang)}
+                   ${inProximity ? '📸 TAKE PHOTO' : 'VERIFY'}
                  </button>`
           }
         </div>
@@ -321,7 +203,7 @@ export class AppUI {
 
       const checkInBtn = item.querySelector('.pixel-btn-checkin');
       if (checkInBtn) {
-        checkInBtn.addEventListener('click', () => this.handleCheckIn(idx));
+        checkInBtn.addEventListener('click', () => this.promptPhotoVerification(idx));
       }
 
       this.spotsList.appendChild(item);
@@ -330,28 +212,6 @@ export class AppUI {
     // Google Maps Walking route
     const googleUrl = getGoogleMapsOptimalRouteUrl(this.dailyState.origin, this.dailyState.spots);
     this.btnGoogleRoute.href = googleUrl;
-
-    // Apple Maps route
-    const lastSpot = this.dailyState.spots[this.dailyState.spots.length - 1];
-    this.btnAppleMaps.href = getAppleMapsUrl(lastSpot.lat, lastSpot.lng);
-
-    // Yandex Maps route
-    const isYandexTerritory = this.currentCity.countryCode === 'BY' || 
-                              this.currentCity.countryCode === 'RU' ||
-                              this.currentCity.id === 'moscow' ||
-                              this.currentCity.id === 'grodno';
-
-    if (isYandexTerritory) {
-      this.btnYandexMaps.style.display = 'inline-flex';
-      this.btnYandexMaps.href = getYandexMapsUrl(
-        this.dailyState.origin.lat,
-        this.dailyState.origin.lng,
-        lastSpot.lat,
-        lastSpot.lng
-      );
-    } else {
-      this.btnYandexMaps.style.display = 'none';
-    }
   }
 
   updateSpotsLiveDistances() {
@@ -363,75 +223,70 @@ export class AppUI {
       const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
       const distEl = document.getElementById(`spot-dist-${idx}`);
       if (distEl) {
-        distEl.textContent = `📍 ${formatDistance(prox.distanceKm, this.currentLang)}`;
+        distEl.textContent = `📍 ${formatDistance(prox.distanceKm)} away`;
       }
 
       const btn = document.querySelector(`.pixel-btn-checkin[data-idx="${idx}"]`);
       if (btn) {
         if (prox.inRange) {
           btn.classList.add('ready');
-          btn.textContent = t('checkInReadyBtn', this.currentLang);
+          btn.textContent = '📸 TAKE PHOTO';
         } else {
           btn.classList.remove('ready');
-          btn.textContent = t('checkInBtn', this.currentLang);
+          btn.textContent = 'VERIFY';
         }
       }
     });
   }
 
-  handleCheckIn(spotIndex) {
+  /**
+   * Prompts BeReal-style photo verification when user arrives within 21m.
+   * @param {number} spotIndex
+   */
+  promptPhotoVerification(spotIndex) {
     if (!this.userLocation) {
-      this.showToast(t('gpsLocating', this.currentLang));
+      this.showToast('📍 WAITING FOR GPS SIGNAL...');
       return;
     }
 
-    const result = this.streakService.checkInSpot(spotIndex, this.userLocation);
+    const spot = this.dailyState.spots[spotIndex];
+    if (spot.checkedIn) {
+      this.showToast('✅ SPOT ALREADY VERIFIED!');
+      return;
+    }
+
+    const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
+    if (!prox.inRange) {
+      this.showToast(`⚠️ Too far (${prox.distanceMeters} m). Get within 21 m to verify!`);
+      if ('vibrate' in navigator) navigator.vibrate(80);
+      return;
+    }
+
+    // Open Camera Viewfinder Modal
+    this.cameraModal.open(spotIndex, spot, async (idx, photoDataUrl) => {
+      await this.handlePhotoVerified(idx, photoDataUrl);
+    });
+  }
+
+  async handlePhotoVerified(spotIndex, photoDataUrl) {
+    const result = await this.streakService.verifySpotWithPhoto(spotIndex, this.userLocation, photoDataUrl);
 
     if (result.success) {
       if ('vibrate' in navigator) navigator.vibrate([40, 60, 40]);
 
-      this.dailyState = this.streakService.getDailyState(this.currentCity.id);
+      this.dailyState = this.streakService.getDailyState();
       this.renderTourUI();
-      this.map.renderDailySpotsAndRoute(this.dailyState.origin, this.dailyState.spots, (idx) => this.handleCheckIn(idx));
+      this.map.renderDailySpotsAndRoute(this.dailyState.origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
 
       if (result.allCompleted) {
         this.updateStreakBadge();
         this.triggerConfetti(true);
-        this.showToast(`🎉 STREAK: ${result.streak} ${t('streakLabel', this.currentLang)}! 🔥`);
+        this.showToast(`🎉 ALL 3 DESTINATIONS VERIFIED! STREAK: ${result.streak} DAYS! 🔥`);
       } else {
         this.showToast(result.message);
       }
     } else {
-      if ('vibrate' in navigator) navigator.vibrate(100);
       this.showToast(`⚠️ ${result.message}`);
-    }
-  }
-
-  copyCoordinates() {
-    if (!this.dailyState || !this.dailyState.spots) return;
-    const text = this.dailyState.spots.map(s => `${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}`).join(' | ');
-    navigator.clipboard.writeText(text).then(() => {
-      this.showToast(`📋 ${t('coordsCopied', this.currentLang)}`);
-      if ('vibrate' in navigator) navigator.vibrate(15);
-    });
-  }
-
-  async handleCitySearch() {
-    const query = this.citySearchInput.value.trim();
-    if (!query) return;
-
-    this.searchStatusMsg.style.display = 'block';
-    this.searchStatusMsg.textContent = '🔍 SZUKANIE W OPENSTREETMAP...';
-
-    try {
-      const city = await this.cityService.searchAndFetchCity(query);
-      this.searchStatusMsg.style.display = 'none';
-      this.citySearchInput.value = '';
-      this.selectCity(city);
-      this.showToast(`✨ ${city.nativeName} DODANO!`);
-    } catch (err) {
-      this.searchStatusMsg.style.display = 'block';
-      this.searchStatusMsg.textContent = `❌ ${err.message || 'NIE ZNALEZIONO'}`;
     }
   }
 
@@ -439,7 +294,7 @@ export class AppUI {
     try {
       if (isGrand) {
         confetti({
-          particleCount: 100,
+          particleCount: 120,
           spread: 80,
           origin: { y: 0.6 }
         });
@@ -459,63 +314,6 @@ export class AppUI {
     this.toast.classList.add('show');
     setTimeout(() => {
       this.toast.classList.remove('show');
-    }, 2500);
-  }
-
-  toggleTheme() {
-    this.isDark = !this.isDark;
-    this.applyTheme(this.isDark);
-    localStorage.setItem('dokad_theme', this.isDark ? 'dark' : 'light');
-  }
-
-  applyTheme(isDark) {
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    this.themeIcon.textContent = isDark ? '☀️' : '🌙';
-    this.map.setTileTheme(isDark);
-  }
-
-  openCityModal() {
-    this.modalCity.classList.add('active');
-    this.citySearchInput.focus();
-  }
-
-  closeCityModal() {
-    this.modalCity.classList.remove('active');
-  }
-
-  openInfoModal() {
-    this.modalInfo.classList.add('active');
-  }
-
-  closeInfoModal() {
-    this.modalInfo.classList.remove('active');
-  }
-
-  initPWAInstall() {
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      this.deferredInstallPrompt = e;
-      this.btnInstallPWA.style.display = 'flex';
-    });
-
-    window.addEventListener('appinstalled', () => {
-      this.btnInstallPWA.style.display = 'none';
-      this.deferredInstallPrompt = null;
-      this.showToast('🎉 PWA ZAINSTALOWANE');
-    });
-  }
-
-  promptPWAInstall() {
-    if (this.deferredInstallPrompt) {
-      this.deferredInstallPrompt.prompt();
-      this.deferredInstallPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          this.btnInstallPWA.style.display = 'none';
-        }
-        this.deferredInstallPrompt = null;
-      });
-    } else {
-      this.showToast(t('installPrompt', this.currentLang));
-    }
+    }, 2800);
   }
 }

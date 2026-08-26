@@ -1,11 +1,13 @@
 import {
   generate3SpotsInCity,
+  generateRandomSpotsInRadius,
   solveOptimalRoute,
   checkProximity
 } from './geometry.js';
+import { photoStorage } from './photoStorage.js';
 
-const STORAGE_KEY_DAILY = 'dokad_daily_state_v3';
-const STORAGE_KEY_STREAK = 'dokad_streak_stats_v3';
+const STORAGE_KEY_DAILY = 'dokad_daily_state_v5';
+const STORAGE_KEY_STREAK = 'dokad_streak_stats_v5';
 
 export class StreakService {
   constructor() {
@@ -29,7 +31,7 @@ export class StreakService {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_STREAK);
       if (!raw) {
-        return { currentStreak: 0, lastCompletedDate: null, totalCompletedDays: 0 };
+        return { currentStreak: 0, lastCompletedDate: null, totalCompletedDays: 0, completedDates: [] };
       }
       const stats = JSON.parse(raw);
       const today = this.getTodayDateString();
@@ -43,7 +45,7 @@ export class StreakService {
 
       return stats;
     } catch {
-      return { currentStreak: 0, lastCompletedDate: null, totalCompletedDays: 0 };
+      return { currentStreak: 0, lastCompletedDate: null, totalCompletedDays: 0, completedDates: [] };
     }
   }
 
@@ -80,26 +82,33 @@ export class StreakService {
   }
 
   /**
-   * Initializes 3 daily spots strictly inside the city boundary.
+   * Initializes 3 daily spots strictly inside city boundary or within 2 km radius.
    * @param {{lat: number, lng: number}} origin
-   * @param {Object} city
+   * @param {Object|null} city
    * @returns {Object}
    */
-  initDailySpots(origin, city) {
-    const rawSpots = generate3SpotsInCity(city.geojson, 3);
+  initDailySpots(origin, city = null) {
+    let rawSpots = [];
+    if (city && city.geojson) {
+      rawSpots = generate3SpotsInCity(city.geojson, 3);
+    } else {
+      rawSpots = generateRandomSpotsInRadius(origin.lat, origin.lng, 2.0, 3, 150);
+    }
+
     const { orderedSpots, totalDistanceKm, legs } = solveOptimalRoute(origin, rawSpots);
 
     const spotsWithStatus = orderedSpots.map((spot, idx) => ({
       ...spot,
       step: idx + 1,
       checkedIn: false,
-      checkedInAt: null
+      checkedInAt: null,
+      photoTaken: false
     }));
 
     const dailyState = {
       date: this.getTodayDateString(),
-      cityId: city.id,
-      cityName: city.nativeName || city.name,
+      cityId: city ? city.id : 'local_2km',
+      cityName: city ? (city.nativeName || city.name) : 'Nearby 2 km',
       origin: { lat: origin.lat, lng: origin.lng },
       spots: spotsWithStatus,
       totalDistanceKm,
@@ -112,12 +121,13 @@ export class StreakService {
   }
 
   /**
-   * Attempts to check in at a spot if within 100m proximity.
-   * @param {number} spotIndex (0, 1, or 2)
+   * Verifies arrival at a spot with 21m proximity check and photo submission.
+   * @param {number} spotIndex
    * @param {{lat: number, lng: number}} userLocation
-   * @returns {{success: boolean, message: string, distanceMeters: number, spot?: Object, allCompleted?: boolean, streak?: number}}
+   * @param {string} photoDataUrl
+   * @returns {Promise<{success: boolean, message: string, distanceMeters: number, spot?: Object, allCompleted?: boolean, streak?: number}>}
    */
-  checkInSpot(spotIndex, userLocation) {
+  async verifySpotWithPhoto(spotIndex, userLocation, photoDataUrl) {
     const state = this.getDailyState();
     if (!state || !state.spots || !state.spots[spotIndex]) {
       return { success: false, message: 'No active spot found', distanceMeters: Infinity };
@@ -125,19 +135,33 @@ export class StreakService {
 
     const spot = state.spots[spotIndex];
     if (spot.checkedIn) {
-      return { success: true, message: 'Already checked in!', distanceMeters: 0, spot, allCompleted: state.completed };
+      return { success: true, message: 'Already verified!', distanceMeters: 0, spot, allCompleted: state.completed };
     }
 
     const prox = checkProximity(userLocation.lat, userLocation.lng, spot.lat, spot.lng, 21);
     if (!prox.inRange) {
       return {
         success: false,
-        message: `Too far (${prox.distanceMeters} m). Get within 21 m to check in!`,
+        message: `Too far (${prox.distanceMeters} m). Get within 21 m to take photo!`,
         distanceMeters: prox.distanceMeters
       };
     }
 
+    // Save photo to IndexedDB
+    try {
+      await photoStorage.savePhoto(state.date, spotIndex, photoDataUrl, {
+        lat: spot.lat,
+        lng: spot.lng,
+        step: spot.step,
+        cityName: state.cityName,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      console.warn('Photo save error:', err);
+    }
+
     spot.checkedIn = true;
+    spot.photoTaken = true;
     spot.checkedInAt = new Date().toISOString();
 
     const allDone = state.spots.every(s => s.checkedIn);
@@ -157,6 +181,10 @@ export class StreakService {
         }
         stats.lastCompletedDate = today;
         stats.totalCompletedDays = (stats.totalCompletedDays || 0) + 1;
+        stats.completedDates = stats.completedDates || [];
+        if (!stats.completedDates.includes(today)) {
+          stats.completedDates.push(today);
+        }
         this.saveStreakStats(stats);
       }
       streakCount = stats.currentStreak;
@@ -166,7 +194,7 @@ export class StreakService {
 
     return {
       success: true,
-      message: allDone ? '🎉 ALL 3 SPOTS COMPLETED! STREAK INCREASED!' : `✅ SPOT ${spot.step} CHECKED IN!`,
+      message: allDone ? '🎉 ALL 3 DESTINATIONS VERIFIED! STREAK INCREASED!' : `📸 SPOT ${spot.step} PHOTO VERIFIED!`,
       distanceMeters: prox.distanceMeters,
       spot,
       allCompleted: allDone,

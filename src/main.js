@@ -1,26 +1,27 @@
-import { CityService } from './geo/cityService.js';
 import { MapController } from './components/MapController.js';
 import { AppUI } from './components/UI.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const cityService = new CityService();
   const mapController = new MapController('map');
   
   const ui = new AppUI({
-    cityService,
     mapController
   });
 
-  // Register PWA Service Worker for offline capability
-  if ('serviceWorker' in navigator && import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then((reg) => {
-          console.log('ServiceWorker registered with scope:', reg.scope);
-        })
-        .catch((err) => {
-          console.warn('ServiceWorker registration failed:', err);
-        });
+  // Register PWA Service Worker for offline capability & instant auto-update
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => {
+        // Check for updates
+        reg.update();
+      })
+      .catch((err) => {
+        console.warn('ServiceWorker registration failed:', err);
+      });
+
+    // Auto refresh when new SW takes control
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      console.log('New ServiceWorker active, updating app...');
     });
   }
 });

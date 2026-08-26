@@ -177,6 +177,65 @@ export function generate3SpotsInCity(geojson, count = 3) {
 }
 
 /**
+ * Generates uniformly distributed random points strictly within radiusKm of center.
+ * @param {number} centerLat
+ * @param {number} centerLng
+ * @param {number} radiusKm (default 2.0 km)
+ * @param {number} count (default 3)
+ * @param {number} minDistanceBetweenMeters (default 150m)
+ * @returns {Array<{lat: number, lng: number, id: string}>}
+ */
+export function generateRandomSpotsInRadius(centerLat, centerLng, radiusKm = 2.0, count = 3, minDistanceBetweenMeters = 150) {
+  const spots = [];
+  const maxAttempts = 500;
+  let attempts = 0;
+
+  while (spots.length < count && attempts < maxAttempts) {
+    attempts++;
+    const r = radiusKm * Math.sqrt(Math.random());
+    const theta = Math.random() * 2 * Math.PI;
+
+    const dLat = (r * Math.cos(theta)) / 111.32;
+    const dLng = (r * Math.sin(theta)) / (111.32 * Math.cos(centerLat * (Math.PI / 180)));
+
+    const candidate = {
+      lat: Number((centerLat + dLat).toFixed(6)),
+      lng: Number((centerLng + dLng).toFixed(6))
+    };
+
+    const distToCenter = calculateHaversineDistance(centerLat, centerLng, candidate.lat, candidate.lng);
+    if (distToCenter > radiusKm) continue;
+    if (distToCenter * 1000 < minDistanceBetweenMeters) continue;
+
+    const tooClose = spots.some(existing => {
+      const d = calculateHaversineDistance(existing.lat, existing.lng, candidate.lat, candidate.lng);
+      return d * 1000 < minDistanceBetweenMeters;
+    });
+
+    if (!tooClose) {
+      spots.push({
+        ...candidate,
+        id: `spot_${spots.length + 1}_${Date.now()}`
+      });
+    }
+  }
+
+  while (spots.length < count) {
+    const r = radiusKm * Math.sqrt(Math.random());
+    const theta = Math.random() * 2 * Math.PI;
+    const dLat = (r * Math.cos(theta)) / 111.32;
+    const dLng = (r * Math.sin(theta)) / (111.32 * Math.cos(centerLat * (Math.PI / 180)));
+    spots.push({
+      lat: Number((centerLat + dLat).toFixed(6)),
+      lng: Number((centerLng + dLng).toFixed(6)),
+      id: `spot_${spots.length + 1}_${Date.now()}`
+    });
+  }
+
+  return spots;
+}
+
+/**
  * Calculates geodesic distance between two points using the Haversine formula.
  * @param {number} lat1
  * @param {number} lon1
