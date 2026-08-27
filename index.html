@@ -410,15 +410,28 @@
           <!-- TAB 2: PRIVACY POLICY (GDPR PL/NL & FLORIDA FDBR) -->
           <div id="view-tab-legal-privacy" class="tab-view" style="display: none;">
             <div class="legal-doc-card">
-              <h3 class="legal-heading">🔒 Privacy Policy & Zero-Telemetry Architecture</h3>
-              <p class="legal-p"><strong>Region Compliance:</strong> European Union / Poland & Netherlands (GDPR Regulation (EU) 2016/679) & United States / Florida (Florida Digital Bill of Rights - Fla. Stat. § 501.701 et seq., CCPA).</p>
+              <h3 class="legal-heading">🔒 Privacy Policy & Multi-Jurisdictional Notice</h3>
+              <p class="legal-p"><strong>Applicable Laws:</strong> Poland (RODO / Prawo telekomunikacyjne), Netherlands (AVG / UAVG / Telecommunicatiewet), and United States / Florida (Florida Digital Bill of Rights - Fla. Stat. § 501.701 et seq., CCPA, COPPA).</p>
 
-              <h4 class="legal-subheading">🛡️ 100% On-Device Local Storage:</h4>
+              <h4 class="legal-subheading">🛡️ 1. Zero-Telemetry & 100% On-Device Architecture</h4>
               <ul class="legal-list">
-                <li><strong>Zero Remote Servers:</strong> Dokąd? has no centralized user database, tracking servers, or analytics engines. All coordinates, verification photos, and streaks are stored 100% locally in your device's sandboxed <strong>OPFS</strong> and <strong>IndexedDB</strong>.</li>
-                <li><strong>Biometrics & Passkeys:</strong> WebAuthn authentication runs strictly inside your hardware Secure Enclave / TPM (e.g. Windows Hello, Apple Touch/Face ID, Google Password Manager). Biometric data is never accessible or transmitted.</li>
-                <li><strong>Geolocation & Camera:</strong> Used exclusively in real time on your device to calculate the 21 m proximity check-in and apply local watermarks. Coordinates are never transmitted to any third party.</li>
-                <li><strong>Data Portability & Erasure:</strong> Full JSON export available anytime via the Memories tab. Clearing browser site data deletes 100% of your records permanently.</li>
+                <li><strong>No Central Database or Servers:</strong> Dokąd? does not operate user accounts, remote databases, tracking servers, or analytics SDKs. All data remains exclusively on your physical device.</li>
+                <li><strong>Precise Geolocation (GDPR Art. 4 / FDBR § 501.702):</strong> GPS coordinates are queried ephemerally in RAM strictly for calculating the 21 m spot arrival proximity. Coordinates are never transmitted, logged, or sold.</li>
+                <li><strong>Biometric Security (GDPR Art. 9 / FDBR § 501.702):</strong> WebAuthn Passkeys run inside your device's hardware Secure Enclave / TPM (Windows Hello, Touch/Face ID, Google Password Manager). Biometric data is never accessible to the app or transmitted.</li>
+                <li><strong>Local Photo Vault (OPFS & IndexedDB):</strong> Verification photos and memory metadata are written to your local Origin Private File System and IndexedDB. You maintain complete sovereignty over your files.</li>
+              </ul>
+
+              <h4 class="legal-subheading">⚖️ 2. Regional Legal Frameworks</h4>
+              <ul class="legal-list">
+                <li><strong>🇵🇱 Poland (Rzeczpospolita Polska):</strong> Meets GDPR Art. 5(1)(c) data minimization. Local storage is strictly functional under Art. 173 <em>Prawa telekomunikacyjnego</em>. Freedom of panorama applies under Art. 33 pkt 1 <em>Prawa autorskiego</em> for public architectural scenes.</li>
+                <li><strong>🇳🇱 Netherlands (Nederland):</strong> Meets GDPR & <em>Uitvoeringswet AVG (UAVG)</em>. Functional offline caching is exempt under Art. 11.7a <em>Telecommunicatiewet</em>. Freedom of panorama applies under Art. 18 <em>Auteurswet</em>.</li>
+                <li><strong>🇺🇸 Florida (United States):</strong> Complies with the <em>Florida Digital Bill of Rights (Fla. Stat. § 501.701)</em>. We provide explicit statutory notice: <strong>We do NOT sell, rent, or monetize your sensitive personal, biometric, or precise geolocation data.</strong> Complies with COPPA (zero collection from children under 13).</li>
+              </ul>
+
+              <h4 class="legal-subheading">📦 3. Data Portability & Complete Erasure</h4>
+              <ul class="legal-list">
+                <li><strong>Export Anytime:</strong> Use the <code>📥 EXPORT DAY</code> or <code>📦 EXPORT ALL</code> buttons in the Memories modal to download a full JSON archive of your data.</li>
+                <li><strong>Instant Erasure:</strong> Clearing browser site data / storage instantly and permanently deletes 100% of stored photos, streaks, and access keys.</li>
               </ul>
             </div>
           </div>
@@ -426,12 +439,12 @@
           <!-- TAB 3: TERMS OF SERVICE -->
           <div id="view-tab-legal-terms" class="tab-view" style="display: none;">
             <div class="legal-doc-card">
-              <h3 class="legal-heading">📜 Terms of Service & Safety Guidelines</h3>
-              <p class="legal-p">By using Dokąd?, you agree to the following terms:</p>
+              <h3 class="legal-heading">📜 Terms of Service & Pedestrian Safety</h3>
+              <p class="legal-p">By using Dokąd?, you acknowledge and agree to the following terms:</p>
               <ul class="legal-list">
-                <li><strong>Pedestrian Safety:</strong> Always remain aware of your surroundings, traffic, and terrain. Do not operate the screen while crossing streets.</li>
-                <li><strong>Public Spaces Only:</strong> Never trespass on private property, construction zones, or restricted areas. If a generated coordinate is inaccessible, use the Google Maps navigation to observe safely from public right-of-way.</li>
-                <li><strong>Liability Disclaimer:</strong> Dokąd? is provided as a recreational wellness tool. Users assume all responsibility for their route navigation and personal safety.</li>
+                <li><strong>Pedestrian Safety & Traffic Laws:</strong> Always maintain visual awareness of traffic, terrain, and weather. Never operate your device while crossing roadways. Comply with local traffic codes (PL: <em>Prawo o ruchu drogowym</em>, NL: <em>RVV 1990</em>, FL: <em>Fla. Stat. § 316.130</em>).</li>
+                <li><strong>Public Spaces & Leave No Trace:</strong> Only traverse public thoroughfares, pedestrian footpaths, and public parks. Never trespass on private property, gated areas, or construction sites (FL: <em>Fla. Stat. § 810.09</em>).</li>
+                <li><strong>Recreational Disclaimer:</strong> Dokąd? is an experimental wellness and local anthropological discovery tool. Users assume all responsibility for their route choices, physical exertion, and personal safety.</li>
               </ul>
             </div>
           </div>
