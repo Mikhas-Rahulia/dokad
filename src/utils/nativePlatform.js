@@ -11,6 +11,7 @@
 class NativePlatform {
   constructor() {
     this.wakeLockSentinel = null;
+    this.wakeLockActive = false;
     this.audioCtx = null;
     this.soundEnabled = true;
     this.initVisibilityListener();
@@ -20,6 +21,7 @@ class NativePlatform {
   // 1. SCREEN WAKE LOCK API — Keeps screen active while walking
   // ═══════════════════════════════════════════════════════════════
   async requestWakeLock() {
+    this.wakeLockActive = true;
     if ('wakeLock' in navigator) {
       try {
         if (!this.wakeLockSentinel || this.wakeLockSentinel.released) {
@@ -35,6 +37,7 @@ class NativePlatform {
   }
 
   releaseWakeLock() {
+    this.wakeLockActive = false;
     if (this.wakeLockSentinel) {
       this.wakeLockSentinel.release().catch(() => {});
       this.wakeLockSentinel = null;

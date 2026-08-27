@@ -11,6 +11,7 @@
     "deploy": "vite build && gh-pages -d dist"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.8",
     "gh-pages": "^6.3.0",
     "playwright": "^1.62.1",
     "vite": "^6.2.0"

@@ -81,7 +81,7 @@ html, body {
   touch-action: pan-x pan-y pinch-zoom;
 }
 
-/* CRT Scanline overlay */
+/* CRT Scanline overlay — GPU compositor layer, isolated paint */
 .pixel-scanline-overlay {
   position: fixed;
   inset: 0;
@@ -92,8 +92,9 @@ html, body {
     rgba(0, 0, 0, 0.06) 50%
   );
   background-size: 100% 4px;
-  transform: translateZ(0); /* GPU compositor layer promotion */
+  transform: translateZ(0);
   will-change: transform;
+  contain: strict;
 }
 
 /* Base Pixel Button — GPU compositor optimized */

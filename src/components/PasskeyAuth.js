@@ -166,7 +166,12 @@ export class PasskeyAuth {
       return;
     }
 
-    if (inputVal === currentKey || inputVal.startsWith('DOKAD-') || inputVal.length >= 6) {
+    if (inputVal === currentKey) {
+      this.statusMsg.textContent = t('toastKeyVerified', this.currentLang);
+      this.statusMsg.style.color = 'var(--pixel-green)';
+      setTimeout(() => this.unlockApp(), 400);
+    } else if (/^DOKAD-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(inputVal)) {
+      // Valid format from another device — save it as the new local key
       localStorage.setItem(STORAGE_KEY_ACCESS_KEY, inputVal);
       if (this.activeKeyDisplay) this.activeKeyDisplay.textContent = inputVal;
 
@@ -225,7 +230,6 @@ export class PasskeyAuth {
             { type: 'public-key', alg: -257 }  // RS256
           ],
           authenticatorSelection: {
-            authenticatorAttachment: 'platform',
             userVerification: 'preferred',
             residentKey: 'required',
             requireResidentKey: true
