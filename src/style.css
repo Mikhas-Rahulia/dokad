@@ -1628,3 +1628,215 @@ html, body {
   background: #6366f1;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   ULTRA-RESPONSIVE MOBILE BREAKPOINTS (Smartphones & Small Screens)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .top-header {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: calc(8px + env(safe-area-inset-left, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    gap: 4px;
+  }
+
+  .brand-badge {
+    padding: 5px 8px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+
+  .brand-title {
+    font-size: 0.85rem;
+  }
+
+  .radius-tag {
+    font-size: 0.62rem;
+    padding: 1px 3px;
+  }
+
+  .header-right-group {
+    gap: 4px;
+  }
+
+  .pixel-btn-gps-live {
+    padding: 4px 6px;
+    font-size: 0.72rem;
+    gap: 3px;
+  }
+
+  .gps-header-text {
+    font-size: 0.72rem;
+  }
+
+  .pixel-select {
+    padding: 4px 4px;
+    font-size: 0.72rem;
+  }
+
+  .pixel-btn-nav {
+    padding: 4px 7px;
+    font-size: 0.82rem;
+  }
+
+  /* Hide long text on mobile to prevent header overflow */
+  .nav-btn-text {
+    display: none !important;
+  }
+
+  .streak-badge {
+    padding: 4px 6px;
+    font-size: 0.82rem;
+    gap: 2px;
+  }
+
+  .pixel-icon-btn {
+    padding: 4px 7px;
+    font-size: 0.9rem;
+  }
+
+  /* Compact Bottom Sheet so map is always visible */
+  .bottom-sheet {
+    padding: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    max-height: 54dvh;
+  }
+
+  .bottom-sheet-content {
+    gap: 6px;
+  }
+
+  .pixel-card {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .initial-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .initial-title {
+    font-size: 1.05rem;
+  }
+
+  .initial-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .pixel-btn-roll {
+    padding: 11px;
+    font-size: 0.95rem;
+  }
+
+  .tour-card {
+    max-height: 50dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tour-status-row {
+    gap: 4px;
+  }
+
+  .progress-badge, .pixel-sub-badge {
+    font-size: 0.72rem;
+    padding: 2px 6px;
+  }
+
+  .spots-list-container {
+    gap: 5px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .spot-item {
+    padding: 5px 8px;
+    gap: 6px;
+  }
+
+  .spot-number-badge {
+    width: 22px;
+    height: 22px;
+    font-size: 0.78rem;
+  }
+
+  .spot-title {
+    font-size: 0.78rem;
+  }
+
+  .spot-distance {
+    font-size: 0.7rem;
+  }
+
+  .pixel-btn-checkin {
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
+
+  .navigation-actions {
+    gap: 4px;
+    margin-top: 2px;
+  }
+
+  .pixel-btn-main-route {
+    flex: 1.2 1 110px;
+    padding: 7px 5px;
+    font-size: 0.74rem;
+  }
+
+  .navigation-actions .pixel-btn-secondary {
+    flex: 1 1 85px;
+    padding: 7px 4px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-header {
+    gap: 3px;
+    left: 4px;
+    right: 4px;
+  }
+
+  .brand-badge {
+    padding: 4px 6px;
+    font-size: 0.78rem;
+    gap: 3px;
+  }
+
+  .radius-tag {
+    display: none;
+  }
+
+  .header-right-group {
+    gap: 3px;
+  }
+
+  .pixel-btn-gps-live {
+    padding: 4px 5px;
+    font-size: 0.68rem;
+  }
+
+  .pixel-select {
+    padding: 4px 3px;
+    font-size: 0.68rem;
+  }
+
+  .pixel-btn-nav {
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .streak-badge {
+    padding: 4px 5px;
+    font-size: 0.78rem;
+  }
+
+  .pixel-icon-btn {
+    padding: 4px 6px;
+    font-size: 0.82rem;
+  }
+}
+
+

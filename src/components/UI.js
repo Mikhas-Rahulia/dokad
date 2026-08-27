@@ -20,6 +20,7 @@ export class AppUI {
 
     this.currentLang = this.detectLanguage();
     this.userLocation = null;
+    this.ipFallbackLocation = null;
     this.userAccuracy = null;
     this.lastGpsTimestamp = null;
     this.dailyState = null;
@@ -32,9 +33,9 @@ export class AppUI {
     this.bindEvents();
     this.applyLanguage(this.currentLang);
     this.updateStreakBadge();
+    this.fallbackIpLocationPreload();
     this.initGeolocation();
     this.loadTodayTour();
-    this.fallbackIpLocationPreload();
   }
 
   detectLanguage() {
@@ -243,8 +244,45 @@ export class AppUI {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // HIGH-PRECISION GNSS GEOLOCATION ENGINE
+  // TRIPLE-TIER RESILIENT GEOLOCATION ENGINE
   // ═══════════════════════════════════════════════════════════════
+  async fallbackIpLocationPreload() {
+    try {
+      const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3500) });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.latitude && data.longitude) {
+          this.ipFallbackLocation = {
+            lat: data.latitude,
+            lng: data.longitude,
+            city: data.city || data.region || 'Local City'
+          };
+
+          if (!this.userLocation) {
+            this.userLocation = { lat: data.latitude, lng: data.longitude };
+            this.userAccuracy = 500;
+            this.map.setUserLocation(data.latitude, data.longitude, 500);
+
+            if (!this.hasInitialGpsCentered) {
+              this.hasInitialGpsCentered = true;
+              if (this.map && this.map.map) {
+                this.map.map.flyTo({
+                  center: [data.longitude, data.latitude],
+                  zoom: 13,
+                  duration: 800
+                });
+              }
+            }
+
+            if (this.gpsStatusHeaderText) {
+              this.gpsStatusHeaderText.textContent = `GPS (Wi-Fi)`;
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
   initGeolocation() {
     if (!navigator.geolocation) {
       this.showToast(t('toastGpsReq', this.currentLang));
@@ -271,7 +309,7 @@ export class AppUI {
           this.map.map.flyTo({
             center: [this.userLocation.lng, this.userLocation.lat],
             zoom: 15,
-            duration: 1200
+            duration: 1000
           });
         }
       }
@@ -286,7 +324,12 @@ export class AppUI {
     };
 
     const onErr = (err) => {
-      console.warn('GPS position error:', err.code, err.message);
+      console.warn('GPS position warning:', err.code, err.message);
+      if (!this.userLocation && this.ipFallbackLocation) {
+        this.userLocation = { lat: this.ipFallbackLocation.lat, lng: this.ipFallbackLocation.lng };
+        this.userAccuracy = 500;
+        this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, 500);
+      }
       if (this.gpsStatusHeaderText && !this.userLocation) {
         this.gpsStatusHeaderText.textContent = 'GPS ⚠️';
       }
@@ -296,20 +339,20 @@ export class AppUI {
       }
     };
 
-    // 1. Instant high-accuracy single shot
+    // Tier 2: Instant coarse fix (Wi-Fi/Cell)
     navigator.geolocation.getCurrentPosition(onPos, onErr, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
+      enableHighAccuracy: false,
+      timeout: 6000,
+      maximumAge: 60000
     });
 
-    // 2. Continuous GNSS live stream
+    // Tier 3: High-accuracy continuous GNSS stream
     const startPrecisionWatch = () => {
       if (this.watchId !== null) return;
       this.watchId = navigator.geolocation.watchPosition(onPos, onErr, {
         enableHighAccuracy: true,
         maximumAge: 2000,
-        timeout: 20000
+        timeout: 25000
       });
     };
 
@@ -330,26 +373,6 @@ export class AppUI {
         startPrecisionWatch();
       }
     });
-  }
-
-  async fallbackIpLocationPreload() {
-    if (this.userLocation) return;
-
-    try {
-      const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.latitude && data.longitude && !this.userLocation && !this.hasInitialGpsCentered) {
-          if (this.map && this.map.map) {
-            this.map.map.flyTo({
-              center: [data.longitude, data.latitude],
-              zoom: 12,
-              duration: 800
-            });
-          }
-        }
-      }
-    } catch {}
   }
 
   openGpsDiagnostics() {
@@ -373,7 +396,7 @@ export class AppUI {
         this.gpsDiagCoords.textContent = `${this.userLocation.lat.toFixed(5)}° N, ${this.userLocation.lng.toFixed(5)}° E`;
       }
       if (this.gpsDiagAccuracy) {
-        this.gpsDiagAccuracy.textContent = `±${Math.round(this.userAccuracy || 10)} meters`;
+        this.gpsDiagAccuracy.textContent = `±${Math.round(this.userAccuracy || 15)} meters`;
       }
       if (this.gpsDiagTime && this.lastGpsTimestamp) {
         this.gpsDiagTime.textContent = this.lastGpsTimestamp.toLocaleTimeString();
@@ -500,7 +523,7 @@ export class AppUI {
         const pos = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 12000,
+            timeout: 10000,
             maximumAge: 0
           });
         });
@@ -512,8 +535,12 @@ export class AppUI {
         this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, this.userAccuracy);
       } catch (err) {
         console.warn('GPS acquire error during tour generation:', err);
-        const mapCenter = this.map.map.getCenter();
-        this.userLocation = { lat: mapCenter.lat, lng: mapCenter.lng };
+        if (this.ipFallbackLocation) {
+          this.userLocation = { lat: this.ipFallbackLocation.lat, lng: this.ipFallbackLocation.lng };
+        } else {
+          const mapCenter = this.map.map.getCenter();
+          this.userLocation = { lat: mapCenter.lat, lng: mapCenter.lng };
+        }
       }
     }
 
