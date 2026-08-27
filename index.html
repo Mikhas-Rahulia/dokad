@@ -9,10 +9,10 @@
     }
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Dokąd? — Daily 3 Walk Destinations</title>
+  <title>Dokąd? — Physical Activity & Local Anthropology</title>
   
   <!-- PWA Meta & Full Manifest Support -->
-  <meta name="description" content="Daily 3 walk destinations in a 2 km radius. Reach 21m proximity, snap BeReal verification photos, and build your daily streak." />
+  <meta name="description" content="Physical activity & local anthropology explorer. 3 daily secret walk spots in a 1.5 km square, 21m proximity BeReal photo check-in, and daily streak." />
   <meta name="theme-color" content="#0c0f17" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -28,7 +28,7 @@
   <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png" />
   <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png" />
   
-  <!-- Self-Hosted Fonts — No Google Fonts waterfall, preloaded for 0ms FOIT -->
+  <!-- Self-Hosted Fonts — Preloaded for 0ms FOIT -->
   <link rel="preload" href="./fonts/PixelifySans-Bold.ttf" as="font" type="font/ttf" crossorigin="anonymous">
   <link rel="preload" href="./fonts/VT323-Regular.ttf" as="font" type="font/ttf" crossorigin="anonymous">
   <style>
@@ -55,10 +55,10 @@
     }
   </style>
 
-  <script type="module" crossorigin src="./assets/index-CCx9VQ7x.js"></script>
+  <script type="module" crossorigin src="./assets/index-DWlWXZ0D.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-map-BbBvu4SU.js">
   <link rel="stylesheet" crossorigin href="./assets/vendor-map-JR8eJ17e.css">
-  <link rel="stylesheet" crossorigin href="./assets/index-BUMKNYhQ.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-DJhO6rX1.css">
 </head>
 <body>
   <div id="app" class="pixel-app">
@@ -77,6 +77,12 @@
       </div>
 
       <div class="header-right-group">
+        <!-- Live GPS Diagnostic Trigger -->
+        <button id="btn-gps-status" class="pixel-btn pixel-btn-gps-live" title="Live GPS Diagnostics & Verification" aria-label="Live GPS Diagnostics">
+          <span class="gps-pulse-dot">🟢</span>
+          <span id="gps-status-header-text" class="gps-header-text">GPS LIVE</span>
+        </button>
+
         <!-- Language Switcher -->
         <select id="lang-select" class="pixel-select" title="Language / Język / Язык / Мова">
           <option value="pl">PL</option>
@@ -88,6 +94,10 @@
 
         <button id="btn-open-calendar" class="pixel-btn pixel-btn-nav" title="Memories & Photo Gallery">
           <span>📅</span> <span id="nav-memories-text" class="nav-btn-text">MEMORIES</span>
+        </button>
+
+        <button id="btn-open-legal" class="pixel-btn pixel-btn-nav" title="Legal, Privacy (GDPR/FDBR) & Anthropology Mission">
+          <span>⚖️</span> <span id="nav-legal-text" class="nav-btn-text">LEGAL</span>
         </button>
 
         <button id="header-streak-badge" class="pixel-badge streak-badge" title="Daily Streak & Stats" aria-label="Daily Streak">
@@ -135,7 +145,7 @@
         <div id="initial-card" class="pixel-card initial-card">
           <div class="initial-card-body">
             <h2 id="initial-title" class="initial-title">🎯 TODAY'S 3 WALK DESTINATIONS</h2>
-            <p id="initial-subtitle" class="initial-subtitle">1 click to generate 3 secret spots within 2 km. Arrive within 21 m and take a verification photo to keep your streak!</p>
+            <p id="initial-subtitle" class="initial-subtitle">1 click to generate 3 secret spots within 1.5 km returning to start. Arrive within 21 m and take a verification photo to keep your streak!</p>
           </div>
           <button id="btn-generate-daily" class="pixel-btn pixel-btn-roll">
             <span class="dice-icon">🎲</span>
@@ -159,7 +169,7 @@
           INITIALIZING...
         </div>
 
-        <!-- Main Passkey Prompt (Unlock or Register with Password Manager on any device) -->
+        <!-- Main Passkey Prompt -->
         <div id="passkey-main-prompt" class="passkey-action-group">
           <button id="btn-passkey-unlock" class="pixel-btn pixel-btn-roll">
             <span>👆</span> <span id="btn-unlock-text">UNLOCK WITH PASSKEY</span>
@@ -187,6 +197,49 @@
             <code id="active-access-key-display">DOKAD-XXXX-XXXX-XXXX</code>
             <button id="btn-copy-access-key" class="pixel-btn pixel-btn-sm">
               <span id="btn-copy-key-text">📋 COPY KEY</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GPS Live Diagnostics & Verification Modal -->
+    <div id="modal-gps-diag" class="modal-overlay">
+      <div class="modal-card pixel-modal gps-modal-card">
+        <div class="modal-header">
+          <h3 id="gps-diag-modal-title" class="modal-title">🛰️ GPS LIVE DIAGNOSTICS</h3>
+          <button id="modal-gps-diag-close" class="pixel-close-btn" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body gps-modal-body">
+          <div class="gps-status-card">
+            <div class="gps-status-row">
+              <span class="gps-diag-label">GNSS STATUS:</span>
+              <span id="gps-diag-status" class="gps-diag-val live">🟢 ACTIVE & STREAMING</span>
+            </div>
+            <div class="gps-status-row">
+              <span class="gps-diag-label">COORDINATES:</span>
+              <span id="gps-diag-coords" class="gps-diag-val">--</span>
+            </div>
+            <div class="gps-status-row">
+              <span class="gps-diag-label">ACCURACY:</span>
+              <span id="gps-diag-accuracy" class="gps-diag-val">--</span>
+            </div>
+            <div class="gps-status-row">
+              <span class="gps-diag-label">LAST UPDATE:</span>
+              <span id="gps-diag-time" class="gps-diag-val">--</span>
+            </div>
+          </div>
+
+          <div id="gps-diag-spots-container" class="gps-diag-spots-box">
+            <div class="gps-spots-title">📍 DISTANCE TO DAILY SPOTS:</div>
+            <div id="gps-diag-spots-list" class="gps-spots-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <div class="gps-actions-row">
+            <button id="btn-gps-force-test" class="pixel-btn pixel-btn-roll">
+              <span>🛰️</span> <span id="btn-gps-test-text">VERIFY & RECENTER GPS</span>
             </button>
           </div>
         </div>
@@ -229,6 +282,9 @@
             <div class="preview-actions">
               <button id="btn-camera-retake" class="pixel-btn pixel-btn-secondary">
                 <span>🔄</span> <span id="btn-retake-text">RETAKE</span>
+              </button>
+              <button id="btn-camera-save-gallery" class="pixel-btn pixel-btn-secondary" title="Save watermarked photo to device gallery">
+                <span>💾</span> <span id="btn-save-gallery-text">SAVE TO GALLERY</span>
               </button>
               <button id="btn-camera-confirm" class="pixel-btn pixel-btn-confirm">
                 <span>✅</span> <span id="btn-confirm-text">CONFIRM & VERIFY</span>
@@ -277,7 +333,12 @@
 
             <!-- Day Photo Memories Section -->
             <div id="day-memories-container" class="day-memories-container">
-              <h4 id="day-memories-title" class="day-memories-title">📅 MEMORIES</h4>
+              <div class="day-memories-header-row">
+                <h4 id="day-memories-title" class="day-memories-title">📅 MEMORIES</h4>
+                <button id="btn-export-day" class="pixel-btn pixel-btn-sm pixel-btn-export" style="display: none;">
+                  <span>📥</span> <span id="btn-export-day-text">EXPORT DAY (JSON)</span>
+                </button>
+              </div>
               <div id="day-memories-list" class="day-memories-list">
                 <!-- Dynamically populated photo cards -->
               </div>
@@ -286,6 +347,11 @@
 
           <!-- TAB 2: PHOTO GALLERY (ALL PHOTOS GRID) -->
           <div id="view-tab-gallery" class="tab-view" style="display: none;">
+            <div class="tab-action-bar">
+              <button id="btn-export-all-gallery" class="pixel-btn pixel-btn-sm pixel-btn-export" style="display: none;">
+                <span>📦</span> <span id="btn-export-all-gallery-text">EXPORT ALL (JSON)</span>
+              </button>
+            </div>
             <div id="gallery-photos-grid" class="gallery-photos-grid">
               <!-- Dynamically populated -->
             </div>
@@ -293,8 +359,83 @@
 
           <!-- TAB 3: STREAK STATISTICS -->
           <div id="view-tab-streak" class="tab-view" style="display: none;">
+            <div class="tab-action-bar">
+              <button id="btn-export-all-streak" class="pixel-btn pixel-btn-sm pixel-btn-export">
+                <span>📦</span> <span id="btn-export-all-streak-text">EXPORT ALL (JSON)</span>
+              </button>
+            </div>
             <div id="streak-stats-content" class="streak-stats-content">
               <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Legal, Privacy (GDPR/FDBR) & Anthropology Mission Modal -->
+    <div id="modal-legal" class="modal-overlay">
+      <div class="modal-card pixel-modal legal-modal-card">
+        <div class="modal-tabs-header">
+          <button id="tab-btn-legal-mission" class="pixel-tab-btn active">
+            <span id="tab-legal-mission-text">🏃 ANTHROPOLOGY & WELLNESS</span>
+          </button>
+          <button id="tab-btn-legal-privacy" class="pixel-tab-btn">
+            <span id="tab-legal-privacy-text">🔒 PRIVACY (GDPR/FDBR)</span>
+          </button>
+          <button id="tab-btn-legal-terms" class="pixel-tab-btn">
+            <span id="tab-legal-terms-text">📜 TERMS OF SERVICE</span>
+          </button>
+          <button id="modal-legal-close" class="pixel-close-btn" aria-label="Close">✕</button>
+        </div>
+
+        <div class="modal-body legal-modal-body">
+          
+          <!-- TAB 1: MISSION & ANTHROPOLOGY -->
+          <div id="view-tab-legal-mission" class="tab-view active">
+            <div class="legal-doc-card">
+              <h3 class="legal-heading">🏛️ Physical Activity & Local Micro-Anthropology</h3>
+              <p class="legal-p"><strong>Dokąd?</strong> is designed to transform daily walks into meaningful physical wellness and micro-anthropological field exploration.</p>
+              
+              <h4 class="legal-subheading">🎯 Core Principles:</h4>
+              <ul class="legal-list">
+                <li><strong>Micro-Exploration:</strong> Generate 3 non-commercial, serendipitous coordinates in a 1.5 km walking square to uncover architectural heritage, public artifacts, hidden courtyards, and local neighborhood textures.</li>
+                <li><strong>Active Physical Wellness:</strong> Encourages steady daily cardio (1.5–3.0 km closed loops) with habit-building streaks and zero gamified screen distraction.</li>
+                <li><strong>Leave No Trace & Ethical Exploring:</strong> Only explore public thoroughfares. Respect local communities, private properties, and natural environments.</li>
+              </ul>
+
+              <div class="legal-highlight-box">
+                💼 <em>Ready for portfolio and LinkedIn presentation as an open-source health, civic technology, and urban anthropology project.</em>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: PRIVACY POLICY (GDPR PL/NL & FLORIDA FDBR) -->
+          <div id="view-tab-legal-privacy" class="tab-view" style="display: none;">
+            <div class="legal-doc-card">
+              <h3 class="legal-heading">🔒 Privacy Policy & Zero-Telemetry Architecture</h3>
+              <p class="legal-p"><strong>Region Compliance:</strong> European Union / Poland & Netherlands (GDPR Regulation (EU) 2016/679) & United States / Florida (Florida Digital Bill of Rights - Fla. Stat. § 501.701 et seq., CCPA).</p>
+
+              <h4 class="legal-subheading">🛡️ 100% On-Device Local Storage:</h4>
+              <ul class="legal-list">
+                <li><strong>Zero Remote Servers:</strong> Dokąd? has no centralized user database, tracking servers, or analytics engines. All coordinates, verification photos, and streaks are stored 100% locally in your device's sandboxed <strong>OPFS</strong> and <strong>IndexedDB</strong>.</li>
+                <li><strong>Biometrics & Passkeys:</strong> WebAuthn authentication runs strictly inside your hardware Secure Enclave / TPM (e.g. Windows Hello, Apple Touch/Face ID, Google Password Manager). Biometric data is never accessible or transmitted.</li>
+                <li><strong>Geolocation & Camera:</strong> Used exclusively in real time on your device to calculate the 21 m proximity check-in and apply local watermarks. Coordinates are never transmitted to any third party.</li>
+                <li><strong>Data Portability & Erasure:</strong> Full JSON export available anytime via the Memories tab. Clearing browser site data deletes 100% of your records permanently.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- TAB 3: TERMS OF SERVICE -->
+          <div id="view-tab-legal-terms" class="tab-view" style="display: none;">
+            <div class="legal-doc-card">
+              <h3 class="legal-heading">📜 Terms of Service & Safety Guidelines</h3>
+              <p class="legal-p">By using Dokąd?, you agree to the following terms:</p>
+              <ul class="legal-list">
+                <li><strong>Pedestrian Safety:</strong> Always remain aware of your surroundings, traffic, and terrain. Do not operate the screen while crossing streets.</li>
+                <li><strong>Public Spaces Only:</strong> Never trespass on private property, construction zones, or restricted areas. If a generated coordinate is inaccessible, use the Google Maps navigation to observe safely from public right-of-way.</li>
+                <li><strong>Liability Disclaimer:</strong> Dokąd? is provided as a recreational wellness tool. Users assume all responsibility for their route navigation and personal safety.</li>
+              </ul>
             </div>
           </div>
 
