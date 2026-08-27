@@ -55,7 +55,7 @@
     }
   </style>
 
-  <script type="module" crossorigin src="./assets/index--gZoIED_.js"></script>
+  <script type="module" crossorigin src="./assets/index-hDQW2wSd.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-map-BbBvu4SU.js">
   <link rel="stylesheet" crossorigin href="./assets/vendor-map-JR8eJ17e.css">
   <link rel="stylesheet" crossorigin href="./assets/index-DJhO6rX1.css">
@@ -183,23 +183,32 @@
           <p id="passkey-help-text" class="passkey-help-text">Works with 1Password, Bitwarden, iCloud Keychain, Google Password Manager, Windows Hello, and Touch/Face ID.</p>
         </div>
 
-        <!-- Manual Universal Access Key View -->
-        <div id="passkey-key-input-prompt" class="passkey-action-group" style="display: none;">
-          <input type="text" id="input-access-key" class="pixel-input" placeholder="DOKAD-XXXX-XXXX-XXXX" autocomplete="off" />
-          <button id="btn-submit-access-key" class="pixel-btn pixel-btn-roll">
+        <!-- Manual Universal Access Key View & WebAuthn Autofill Target -->
+        <form id="passkey-key-input-prompt" class="passkey-action-group" style="display: none;" onsubmit="return false;">
+          <input
+            type="text"
+            id="input-access-key"
+            name="username"
+            class="pixel-input"
+            placeholder="DOKAD-XXXX-XXXX-XXXX"
+            autocomplete="username webauthn"
+            autocapitalize="characters"
+            spellcheck="false"
+          />
+          <button id="btn-submit-access-key" type="submit" class="pixel-btn pixel-btn-roll">
             <span>🔓</span> <span id="btn-submit-key-text">UNLOCK WITH KEY</span>
           </button>
-          <button id="btn-back-to-passkey" class="pixel-btn pixel-btn-secondary">
+          <button id="btn-back-to-passkey" type="button" class="pixel-btn pixel-btn-secondary">
             <span>👆</span> <span id="btn-back-passkey-text">USE PASSKEY INSTEAD</span>
           </button>
           <div class="active-key-info">
             <span id="your-device-key-label">YOUR DEVICE KEY:</span>
             <code id="active-access-key-display">DOKAD-XXXX-XXXX-XXXX</code>
-            <button id="btn-copy-access-key" class="pixel-btn pixel-btn-sm">
+            <button id="btn-copy-access-key" type="button" class="pixel-btn pixel-btn-sm">
               <span id="btn-copy-key-text">📋 COPY KEY</span>
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
 
