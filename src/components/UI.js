@@ -3,6 +3,7 @@ import { PasskeyAuth } from './PasskeyAuth.js';
 import { CameraModal } from './CameraModal.js';
 import { CalendarModal } from './CalendarModal.js';
 import { t } from '../i18n/translations.js';
+import { nativePlatform } from '../utils/nativePlatform.js';
 import {
   formatDistance,
   checkProximity,
@@ -77,6 +78,7 @@ export class AppUI {
     this.cameraModal = new CameraModal(this.currentLang);
     this.calendarModal = new CalendarModal(this.streakService, this.currentLang);
     this.passkeyAuth = new PasskeyAuth(() => {
+      nativePlatform.playCoin();
       this.showToast(t('toastUnlocked', this.currentLang));
       if (this.userLocation) {
         this.map.recenterUser();
@@ -89,19 +91,29 @@ export class AppUI {
     if (this.langSelect) {
       this.langSelect.value = this.currentLang;
       this.langSelect.addEventListener('change', (e) => {
+        nativePlatform.playBlip();
         this.setLanguage(e.target.value);
       });
     }
 
     // Locate GPS
-    this.btnLocateMe.addEventListener('click', () => this.centerOnUser());
+    this.btnLocateMe.addEventListener('click', () => {
+      nativePlatform.playBlip();
+      this.centerOnUser();
+    });
 
     // Open Calendar & Gallery Memories
-    this.btnOpenCalendar.addEventListener('click', () => this.calendarModal.open('calendar'));
+    this.btnOpenCalendar.addEventListener('click', () => {
+      nativePlatform.playBlip();
+      this.calendarModal.open('calendar');
+    });
 
     // Open Streak Stats from Header Badge
     if (this.headerStreakBadge) {
-      this.headerStreakBadge.addEventListener('click', () => this.calendarModal.open('streak'));
+      this.headerStreakBadge.addEventListener('click', () => {
+        nativePlatform.playBlip();
+        this.calendarModal.open('streak');
+      });
     }
 
     // Generate & Reroll 3 daily spots
@@ -239,6 +251,14 @@ export class AppUI {
       this.dailyState = state;
       this.renderTourUI();
       this.map.renderDailySpotsAndRoute(state.origin, state.spots, (idx) => this.promptPhotoVerification(idx));
+
+      const pending = state.spots.filter(s => !s.checkedIn).length;
+      if (pending > 0) {
+        nativePlatform.requestWakeLock();
+        nativePlatform.setAppBadge(pending);
+      } else {
+        nativePlatform.clearAppBadge();
+      }
     } else {
       this.initialCard.style.display = 'flex';
       this.tourCard.style.display = 'none';
@@ -247,22 +267,30 @@ export class AppUI {
 
   generateDailyTour(isReroll = false) {
     if (isReroll && !this.streakService.canShuffleToday()) {
+      nativePlatform.playError();
       this.showToast(t('toastShuffleLimit', this.currentLang));
       if ('vibrate' in navigator) navigator.vibrate(80);
       return;
     }
 
+    nativePlatform.playBlip();
     const origin = this.userLocation || { lat: 50.0647, lng: 19.9450 };
 
     try {
       this.dailyState = this.streakService.initDailySpots(origin, null, isReroll);
     } catch {
+      nativePlatform.playError();
       this.showToast(t('toastShuffleLimit', this.currentLang));
       return;
     }
 
-    this.map.renderDailySpotsAndRoute(origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
-    this.renderTourUI();
+    nativePlatform.transition(() => {
+      this.map.renderDailySpotsAndRoute(origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
+      this.renderTourUI();
+    });
+
+    nativePlatform.requestWakeLock();
+    nativePlatform.setAppBadge(3);
 
     if ('vibrate' in navigator) navigator.vibrate([20, 35, 20]);
     this.triggerConfetti();
@@ -339,7 +367,10 @@ export class AppUI {
 
       const checkInBtn = item.querySelector('.pixel-btn-checkin');
       if (checkInBtn) {
-        checkInBtn.addEventListener('click', () => this.promptPhotoVerification(idx));
+        checkInBtn.addEventListener('click', () => {
+          nativePlatform.playBlip();
+          this.promptPhotoVerification(idx);
+        });
       }
 
       this.spotsList.appendChild(item);
@@ -381,18 +412,21 @@ export class AppUI {
    */
   promptPhotoVerification(spotIndex) {
     if (!this.userLocation) {
+      nativePlatform.playError();
       this.showToast(t('toastGpsWait', this.currentLang));
       return;
     }
 
     const spot = this.dailyState.spots[spotIndex];
     if (spot.checkedIn) {
+      nativePlatform.playBlip();
       this.showToast(t('toastAlreadyDone', this.currentLang));
       return;
     }
 
     const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
     if (!prox.inRange) {
+      nativePlatform.playError();
       this.showToast(t('toastTooFar', this.currentLang, { dist: prox.distanceMeters }));
       if ('vibrate' in navigator) navigator.vibrate(80);
       return;
@@ -414,14 +448,23 @@ export class AppUI {
       this.renderTourUI();
       this.map.renderDailySpotsAndRoute(this.dailyState.origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
 
+      const pending = this.dailyState.spots.filter(s => !s.checkedIn).length;
+
       if (result.allCompleted) {
+        nativePlatform.playVictory();
+        nativePlatform.clearAppBadge();
+        nativePlatform.releaseWakeLock();
+
         this.updateStreakBadge();
         this.triggerConfetti(true);
         this.showToast(t('toastAllDone', this.currentLang, { streak: result.streak }));
       } else {
+        nativePlatform.playCoin();
+        nativePlatform.setAppBadge(pending);
         this.showToast(t('toastSpotDone', this.currentLang, { step: spotIndex + 1 }));
       }
     } else {
+      nativePlatform.playError();
       this.showToast(`⚠️ ${result.message}`);
     }
   }

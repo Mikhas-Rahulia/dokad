@@ -2,7 +2,7 @@ import { t } from '../i18n/translations.js';
 
 const PROMPT_SEEN_KEY = 'dokad_pwa_one_time_prompt_v2';
 const SHOW_DELAY_MS = 10000; // Trigger after 10 seconds of usage
-const CLOSE_UNLOCK_SECONDS = 3; // Closable after 3 seconds
+const CLOSE_UNLOCK_SECONDS = 10; // Closable strictly after 10 seconds (User requirement)
 
 export class PWAInstallPrompt {
   constructor() {

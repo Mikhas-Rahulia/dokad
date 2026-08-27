@@ -47,23 +47,30 @@ button, a, [role="button"], .pixel-btn {
 html, body {
   width: 100%;
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  -webkit-touch-callout: none;
   font-family: var(--font-pixel);
   background-color: var(--bg-color);
   color: var(--text-primary);
   user-select: none;
+  -webkit-user-select: none;
   -webkit-font-smoothing: none;
 }
 
 #app {
   width: 100%;
   height: 100%;
+  height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-/* Map Viewport */
+/* WebGL Map Viewport */
 #map {
   position: absolute;
   top: 0;
@@ -71,10 +78,7 @@ html, body {
   width: 100%;
   height: 100%;
   z-index: 1;
-}
-
-#map .leaflet-tile {
-  filter: brightness(0.7) invert(1) contrast(2.2) hue-rotate(200deg) saturate(0.35) brightness(0.8);
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* CRT Scanline overlay */
@@ -1114,6 +1118,36 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.lightbox-actions-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.lightbox-actions-row .pixel-btn-roll {
+  flex: 2;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.lightbox-actions-row .pixel-btn-secondary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* View Transitions API Native Smoothing */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.15s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Map Markers */

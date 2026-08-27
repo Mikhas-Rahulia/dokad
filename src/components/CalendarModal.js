@@ -1,5 +1,6 @@
 import { photoStorage } from '../geo/photoStorage.js';
 import { t } from '../i18n/translations.js';
+import { nativePlatform } from '../utils/nativePlatform.js';
 
 export class CalendarModal {
   constructor(streakService, lang = 'pl') {
@@ -46,10 +47,13 @@ export class CalendarModal {
     this.lightboxMetaInfo = document.getElementById('lightbox-meta-info');
     this.lightboxDownload = document.getElementById('btn-lightbox-download');
     this.btnDownloadText = document.getElementById('btn-download-text');
+    this.btnLightboxShare = document.getElementById('btn-lightbox-share');
+    this.btnShareText = document.getElementById('btn-share-text');
 
     this.currentDate = new Date();
     this.selectedDateStr = null;
     this.activeTab = 'calendar'; // 'calendar' | 'gallery' | 'streak'
+    this.activeLightboxPhoto = null;
 
     this.bindEvents();
     this.updateLanguageStrings();
@@ -69,15 +73,21 @@ export class CalendarModal {
     if (this.tabGalleryText) this.tabGalleryText.textContent = t('tabGalleryText', l);
     if (this.tabStreakText) this.tabStreakText.textContent = t('tabStreakText', l);
     if (this.btnDownloadText) this.btnDownloadText.textContent = t('downloadPhotoBtn', l);
+    if (this.btnShareText) this.btnShareText.textContent = t('sharePhotoBtn', l);
   }
 
   bindEvents() {
-    this.btnClose.addEventListener('click', () => this.close());
+    this.btnClose.addEventListener('click', () => {
+      nativePlatform.playBlip();
+      this.close();
+    });
     this.btnPrev.addEventListener('click', () => {
+      nativePlatform.playBlip();
       this.currentDate.setMonth(this.currentDate.getMonth() - 1);
       this.renderCalendar();
     });
     this.btnNext.addEventListener('click', () => {
+      nativePlatform.playBlip();
       this.currentDate.setMonth(this.currentDate.getMonth() + 1);
       this.renderCalendar();
     });
@@ -93,42 +103,55 @@ export class CalendarModal {
       this.tabBtnStreak.addEventListener('click', () => this.switchTab('streak'));
     }
 
-    // Lightbox Close
+    // Lightbox Close & Share
     if (this.lightboxClose) {
-      this.lightboxClose.addEventListener('click', () => this.closeLightbox());
+      this.lightboxClose.addEventListener('click', () => {
+        nativePlatform.playBlip();
+        this.closeLightbox();
+      });
     }
     if (this.lightboxModal) {
       this.lightboxModal.addEventListener('click', (e) => {
-        if (e.target === this.lightboxModal) this.closeLightbox();
+        if (e.target === this.lightboxModal) {
+          nativePlatform.playBlip();
+          this.closeLightbox();
+        }
       });
+    }
+    if (this.btnLightboxShare) {
+      this.btnLightboxShare.addEventListener('click', () => this.handleSharePhoto());
     }
   }
 
   switchTab(tabName) {
+    nativePlatform.playBlip();
     this.activeTab = tabName;
 
-    // Update buttons
-    [this.tabBtnCalendar, this.tabBtnGallery, this.tabBtnStreak].forEach(b => b?.classList.remove('active'));
-    [this.viewTabCalendar, this.viewTabGallery, this.viewTabStreak].forEach(v => {
-      if (v) v.style.display = 'none';
-    });
+    nativePlatform.transition(() => {
+      // Update buttons
+      [this.tabBtnCalendar, this.tabBtnGallery, this.tabBtnStreak].forEach(b => b?.classList.remove('active'));
+      [this.viewTabCalendar, this.viewTabGallery, this.viewTabStreak].forEach(v => {
+        if (v) v.style.display = 'none';
+      });
 
-    if (tabName === 'calendar') {
-      this.tabBtnCalendar?.classList.add('active');
-      if (this.viewTabCalendar) this.viewTabCalendar.style.display = 'block';
-      this.renderCalendar();
-    } else if (tabName === 'gallery') {
-      this.tabBtnGallery?.classList.add('active');
-      if (this.viewTabGallery) this.viewTabGallery.style.display = 'block';
-      this.renderGallery();
-    } else if (tabName === 'streak') {
-      this.tabBtnStreak?.classList.add('active');
-      if (this.viewTabStreak) this.viewTabStreak.style.display = 'block';
-      this.renderStreak();
-    }
+      if (tabName === 'calendar') {
+        this.tabBtnCalendar?.classList.add('active');
+        if (this.viewTabCalendar) this.viewTabCalendar.style.display = 'block';
+        this.renderCalendar();
+      } else if (tabName === 'gallery') {
+        this.tabBtnGallery?.classList.add('active');
+        if (this.viewTabGallery) this.viewTabGallery.style.display = 'block';
+        this.renderGallery();
+      } else if (tabName === 'streak') {
+        this.tabBtnStreak?.classList.add('active');
+        if (this.viewTabStreak) this.viewTabStreak.style.display = 'block';
+        this.renderStreak();
+      }
+    });
   }
 
   async open(initialTab = 'calendar') {
+    nativePlatform.playBlip();
     this.currentDate = new Date();
     this.modal.classList.add('active');
     this.switchTab(initialTab);
@@ -185,7 +208,10 @@ export class CalendarModal {
         ${isCompleted ? '<span class="day-fire">🔥</span>' : ''}
       `;
 
-      dayCell.addEventListener('click', () => this.showDayMemories(dateStr));
+      dayCell.addEventListener('click', () => {
+        nativePlatform.playBlip();
+        this.showDayMemories(dateStr);
+      });
       this.gridDays.appendChild(dayCell);
     }
 
@@ -313,11 +339,13 @@ export class CalendarModal {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // LIGHTBOX PHOTO VIEWER
+  // LIGHTBOX PHOTO VIEWER & NATIVE SHARING
   // ═══════════════════════════════════════════════════════════════
   openLightbox(photo) {
     if (!this.lightboxModal) return;
+    nativePlatform.playBlip();
 
+    this.activeLightboxPhoto = photo;
     this.lightboxImg.src = photo.image;
     this.lightboxTitle.textContent = `📸 ${t('spotLabel', this.currentLang)} #${photo.step} — ${photo.date}`;
 
@@ -336,6 +364,19 @@ export class CalendarModal {
   closeLightbox() {
     if (this.lightboxModal) {
       this.lightboxModal.classList.remove('active');
+      this.activeLightboxPhoto = null;
     }
+  }
+
+  async handleSharePhoto() {
+    if (!this.activeLightboxPhoto) return;
+    nativePlatform.playBlip();
+
+    const photo = this.activeLightboxPhoto;
+    await nativePlatform.shareContent({
+      title: `Dokąd? Spot #${photo.step}`,
+      text: `Checked in at Spot #${photo.step} in Dokąd! 🔥`,
+      photoDataUrl: photo.image
+    });
   }
 }
