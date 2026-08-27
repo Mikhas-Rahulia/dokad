@@ -2,18 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // Canonical trailing slash for GitHub Pages so relative URLs never break
+    if (location.pathname.endsWith('/dokad')) {
+      location.replace(location.pathname + '/' + location.search + location.hash);
+    }
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dokąd? — Daily 3 Walk Destinations</title>
   
-  <!-- PWA Meta Tags -->
+  <!-- PWA Meta & Full Manifest Support -->
   <meta name="description" content="Daily 3 walk destinations in a 2 km radius. Reach 21m proximity, snap BeReal verification photos, and build your daily streak." />
   <meta name="theme-color" content="#0c0f17" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Dokąd?" />
+  <meta name="application-name" content="Dokąd?" />
+
+  <link rel="manifest" href="./manifest.json" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon-192.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png" />
   
   <!-- Self-Hosted Fonts — No Google Fonts waterfall, preloaded for 0ms FOIT -->
   <link rel="preload" href="./fonts/PixelifySans-Bold.ttf" as="font" type="font/ttf" crossorigin="anonymous">
@@ -42,7 +56,7 @@
     }
   </style>
 
-  <script type="module" crossorigin src="./assets/index-D2_QNY5e.js"></script>
+  <script type="module" crossorigin src="./assets/index-BIvkXOjG.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-map-BbBvu4SU.js">
   <link rel="stylesheet" crossorigin href="./assets/vendor-map-JR8eJ17e.css">
   <link rel="stylesheet" crossorigin href="./assets/index-BOBuFxha.css">
@@ -146,29 +160,28 @@
           INITIALIZING...
         </div>
 
-        <div id="passkey-register-prompt" class="passkey-action-group" style="display: none;">
-          <button id="btn-passkey-register" class="pixel-btn pixel-btn-roll">
-            <span>🔑</span> <span id="btn-register-text">SET UP PASSKEY</span>
+        <!-- Main Passkey Prompt (Unlock or Register with Password Manager on any device) -->
+        <div id="passkey-main-prompt" class="passkey-action-group">
+          <button id="btn-passkey-unlock" class="pixel-btn pixel-btn-roll">
+            <span>👆</span> <span id="btn-unlock-text">UNLOCK WITH PASSKEY</span>
+          </button>
+          <button id="btn-passkey-register" class="pixel-btn pixel-btn-secondary">
+            <span>🔑</span> <span id="btn-register-text">CREATE NEW PASSKEY</span>
           </button>
           <button id="btn-enter-key-mode" class="pixel-btn pixel-btn-secondary">
             <span>⌨️</span> <span id="btn-enter-key-text">ENTER / PASTE ACCESS KEY</span>
           </button>
-          <p id="passkey-help-text" class="passkey-help-text">Use Touch ID, Face ID, Windows Hello, or paste your Universal Access Key.</p>
+          <p id="passkey-help-text" class="passkey-help-text">Works with 1Password, Bitwarden, iCloud Keychain, Google Password Manager, Windows Hello, and Touch/Face ID.</p>
         </div>
 
-        <div id="passkey-unlock-prompt" class="passkey-action-group" style="display: none;">
-          <button id="btn-passkey-unlock" class="pixel-btn pixel-btn-roll">
-            <span>👆</span> <span id="btn-unlock-text">UNLOCK WITH PASSKEY</span>
-          </button>
-          <button id="btn-use-key-instead" class="pixel-btn pixel-btn-secondary">
-            <span>⌨️</span> <span id="btn-use-key-text">USE ACCESS KEY INSTEAD</span>
-          </button>
-        </div>
-
+        <!-- Manual Universal Access Key View -->
         <div id="passkey-key-input-prompt" class="passkey-action-group" style="display: none;">
           <input type="text" id="input-access-key" class="pixel-input" placeholder="DOKAD-XXXX-XXXX-XXXX" autocomplete="off" />
           <button id="btn-submit-access-key" class="pixel-btn pixel-btn-roll">
             <span>🔓</span> <span id="btn-submit-key-text">UNLOCK WITH KEY</span>
+          </button>
+          <button id="btn-back-to-passkey" class="pixel-btn pixel-btn-secondary">
+            <span>👆</span> <span id="btn-back-passkey-text">USE PASSKEY INSTEAD</span>
           </button>
           <div class="active-key-info">
             <span id="your-device-key-label">YOUR DEVICE KEY:</span>
