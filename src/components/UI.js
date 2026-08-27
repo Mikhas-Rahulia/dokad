@@ -1,4 +1,5 @@
 import { StreakService } from '../geo/streakService.js';
+import { RoutingService } from '../geo/routingService.js';
 import { PasskeyAuth } from './PasskeyAuth.js';
 import { CameraModal } from './CameraModal.js';
 import { CalendarModal } from './CalendarModal.js';
@@ -22,6 +23,7 @@ export class AppUI {
     this.userAccuracy = null;
     this.lastGpsTimestamp = null;
     this.dailyState = null;
+    this.activeStreetRoute = null;
     this.watchId = null;
     this.hasInitialGpsCentered = false;
 
@@ -86,6 +88,8 @@ export class AppUI {
     this.tourProgressBadge = document.getElementById('tour-progress-badge');
     this.tourDistanceBadge = document.getElementById('tour-distance-badge');
     this.spotsList = document.getElementById('spots-list');
+    this.btnFitRoute = document.getElementById('btn-fit-route');
+    this.btnFitRouteText = document.getElementById('btn-fit-route-text');
     this.btnGoogleRoute = document.getElementById('btn-google-route');
     this.routeText = document.getElementById('route-text');
     this.btnRerollDaily = document.getElementById('btn-reroll-daily');
@@ -123,6 +127,19 @@ export class AppUI {
       nativePlatform.playBlip();
       this.centerOnUser();
     });
+
+    // Fit In-App Walking Route on Map
+    if (this.btnFitRoute) {
+      this.btnFitRoute.addEventListener('click', () => {
+        nativePlatform.playBlip();
+        if (this.dailyState) {
+          const origin = this.dailyState.origin;
+          const spots = this.dailyState.spots;
+          const coords = this.activeStreetRoute ? this.activeStreetRoute.coordinates : null;
+          this.map.fitTourBounds(origin, spots, coords);
+        }
+      });
+    }
 
     // Open GPS Diagnostics Modal
     if (this.btnGpsStatus) {
@@ -212,6 +229,7 @@ export class AppUI {
     if (this.btnRollText) this.btnRollText.textContent = t('startWalkBtn', lang);
 
     // Tour Card
+    if (this.btnFitRouteText) this.btnFitRouteText.textContent = t('btnFitRouteText', lang);
     if (this.routeText) this.routeText.textContent = t('openGoogleMaps', lang);
     if (this.btnRerollText) {
       const shufflesLeft = this.streakService.getShufflesRemaining();
@@ -314,10 +332,6 @@ export class AppUI {
     });
   }
 
-  /**
-   * Fast IP-based coarse fallback to center the map near the user's city
-   * while hardware GNSS satellites are acquiring lock.
-   */
   async fallbackIpLocationPreload() {
     if (this.userLocation) return;
 
@@ -447,12 +461,14 @@ export class AppUI {
     this.streakCountEl.textContent = stats.currentStreak || 0;
   }
 
-  loadTodayTour() {
+  async loadTodayTour() {
     const state = this.streakService.getDailyState();
     if (state && state.spots && state.spots.length === 3) {
       this.dailyState = state;
       this.renderTourUI();
-      this.map.renderDailySpotsAndRoute(state.origin, state.spots, (idx) => this.promptPhotoVerification(idx));
+
+      // Fetch real street routing in background and render on built-in map
+      this.fetchAndRenderBuiltInRoute(state.origin, state.spots);
 
       const pending = state.spots.filter(s => !s.checkedIn).length;
       if (pending > 0) {
@@ -496,7 +512,6 @@ export class AppUI {
         this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, this.userAccuracy);
       } catch (err) {
         console.warn('GPS acquire error during tour generation:', err);
-        // Fallback to currently centered map center if GPS fails
         const mapCenter = this.map.map.getCenter();
         this.userLocation = { lat: mapCenter.lat, lng: mapCenter.lng };
       }
@@ -513,9 +528,11 @@ export class AppUI {
     }
 
     nativePlatform.transition(() => {
-      this.map.renderDailySpotsAndRoute(origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
       this.renderTourUI();
     });
+
+    // Render built-in pedestrian street route
+    this.fetchAndRenderBuiltInRoute(origin, this.dailyState.spots);
 
     nativePlatform.requestWakeLock();
     nativePlatform.setAppBadge(3);
@@ -524,6 +541,33 @@ export class AppUI {
     this.triggerConfetti();
 
     this.showToast(isReroll ? t('toastNewSpots', this.currentLang) : t('toastSpotsReady', this.currentLang));
+  }
+
+  async fetchAndRenderBuiltInRoute(origin, spots) {
+    // 1. Initial fast render with straight TSP lines
+    this.map.renderDailySpotsAndRoute(origin, spots, (idx) => this.promptPhotoVerification(idx));
+
+    // 2. Fetch high-res pedestrian street geometry
+    try {
+      const routeData = await RoutingService.fetchWalkingLoop(origin, spots);
+      this.activeStreetRoute = routeData;
+
+      if (routeData && routeData.coordinates && routeData.coordinates.length > 0) {
+        this.map.renderDailySpotsAndRoute(
+          origin,
+          spots,
+          (idx) => this.promptPhotoVerification(idx),
+          routeData.coordinates
+        );
+
+        // Update badge with street distance & estimated walking time
+        const distStr = formatDistance(routeData.distanceKm, this.currentLang);
+        const timeStr = routeData.durationMinutes > 0 ? ` (${routeData.durationMinutes} min)` : '';
+        this.tourDistanceBadge.textContent = `🚶 ${distStr}${timeStr} ${t('inAppRouteBadge', this.currentLang)}`;
+      }
+    } catch (err) {
+      console.warn('Built-in routing fetch error:', err);
+    }
   }
 
   renderTourUI() {
@@ -604,7 +648,7 @@ export class AppUI {
       this.spotsList.appendChild(item);
     });
 
-    // Google Maps Walking route
+    // Google Maps Walking route (Option for external app navigation)
     const googleUrl = getGoogleMapsOptimalRouteUrl(this.dailyState.origin, this.dailyState.spots);
     this.btnGoogleRoute.href = googleUrl;
   }
@@ -670,7 +714,14 @@ export class AppUI {
 
       this.dailyState = this.streakService.getDailyState();
       this.renderTourUI();
-      this.map.renderDailySpotsAndRoute(this.dailyState.origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
+
+      const routeCoords = this.activeStreetRoute ? this.activeStreetRoute.coordinates : null;
+      this.map.renderDailySpotsAndRoute(
+        this.dailyState.origin,
+        this.dailyState.spots,
+        (idx) => this.promptPhotoVerification(idx),
+        routeCoords
+      );
 
       const pending = this.dailyState.spots.filter(s => !s.checkedIn).length;
 

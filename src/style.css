@@ -482,26 +482,39 @@ html, body {
 
 .navigation-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
 }
 
 .pixel-btn-main-route {
-  flex: 2;
-  padding: 12px;
-  font-size: 0.95rem;
-  background: var(--pixel-green);
-  color: #000000;
+  flex: 1.3 1 140px;
+  padding: 11px 8px;
+  font-size: 0.88rem;
+  background: var(--pixel-indigo);
+  color: #ffffff;
   font-weight: 800;
   letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-.pixel-btn-secondary {
-  flex: 1;
-  padding: 10px;
+.pixel-btn-main-route:hover {
+  background: #4338ca;
+}
+
+.navigation-actions .pixel-btn-secondary {
+  flex: 1 1 110px;
+  padding: 10px 6px;
   font-size: 0.8rem;
   background: var(--surface-bg);
   color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
 /* Passkey Lock Screen Overlay */

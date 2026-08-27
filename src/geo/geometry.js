@@ -407,16 +407,35 @@ export function getAppleMapsUrl(destLat, destLng) {
 }
 
 /**
- * Generates Yandex Maps URL
- * @param {number|null} originLat
- * @param {number|null} originLng
- * @param {number} destLat
- * @param {number} destLng
- * @returns {string}
+ * Generates a GeoJSON Polygon representation of a circular accuracy buffer around coordinates.
+ * @param {number} lat
+ * @param {number} lng
+ * @param {number} radiusMeters
+ * @param {number} points
+ * @returns {Object} GeoJSON Feature
  */
-export function getYandexMapsUrl(originLat, originLng, destLat, destLng) {
-  const rtext = originLat !== null && originLng !== null
-    ? `~${originLat.toFixed(6)},${originLng.toFixed(6)}~${destLat.toFixed(6)},${destLng.toFixed(6)}`
-    : `~${destLat.toFixed(6)},${destLng.toFixed(6)}`;
-  return `https://yandex.ru/maps/?rtext=${rtext}&rtt=pd`;
+export function createGeoJSONCircle(lat, lng, radiusMeters = 20, points = 32) {
+  const coords = [];
+  const km = Math.max(radiusMeters, 5) / 1000;
+  const distanceX = km / (111.32 * Math.cos(lat * (Math.PI / 180)));
+  const distanceY = km / 110.574;
+
+  for (let i = 0; i < points; i++) {
+    const theta = (i / points) * (2 * Math.PI);
+    const x = distanceX * Math.cos(theta);
+    const y = distanceY * Math.sin(theta);
+    coords.push([lng + x, lat + y]);
+  }
+  coords.push(coords[0]); // Close ring
+
+  return {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [coords]
+    },
+    properties: {
+      radius: radiusMeters
+    }
+  };
 }

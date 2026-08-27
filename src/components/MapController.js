@@ -1,39 +1,18 @@
-import { Map, Marker, Popup, AttributionControl } from 'maplibre-gl';
+import { Map, Marker, Popup } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-
-function createGeoJSONCircle(lat, lng, radiusMeters = 20, points = 32) {
-  const coords = [];
-  const km = Math.max(5, Math.min(radiusMeters, 500)) / 1000;
-  const distanceX = km / (111.32 * Math.cos(lat * Math.PI / 180));
-  const distanceY = km / 110.574;
-
-  for (let i = 0; i <= points; i++) {
-    const theta = (i / points) * (2 * Math.PI);
-    const x = distanceX * Math.cos(theta);
-    const y = distanceY * Math.sin(theta);
-    coords.push([lng + x, lat + y]);
-  }
-
-  return {
-    type: 'Feature',
-    geometry: {
-      type: 'Polygon',
-      coordinates: [coords]
-    },
-    properties: {}
-  };
-}
+import { createGeoJSONCircle } from '../geo/geometry.js';
 
 export class MapController {
-  constructor(containerId) {
+  constructor(containerId = 'map') {
     this.containerId = containerId;
     this.map = null;
-    this.boundarySourceId = 'city-boundary';
-    this.accuracySourceId = 'user-accuracy';
     this.userMarker = null;
+    this.accuracySourceId = 'user-accuracy-source';
+    this.boundarySourceId = 'city-boundary-source';
+    this.routeSourceId = 'daily-route-source';
     this.spotMarkers = [];
-    this.routeSourceId = 'walk-route';
-    this.isDark = false;
+    this.isLoaded = false;
+    this.pendingLayers = [];
 
     this.initMap();
   }
@@ -46,37 +25,39 @@ export class MapController {
         sources: {
           'osm-tiles': {
             type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tiles: [
+              'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ],
             tileSize: 256,
-            attribution: '&copy; <a href="https://openstreetmap.org">OSM</a>'
+            attribution: '© OpenStreetMap contributors'
           }
         },
-        layers: [{
-          id: 'osm-tiles-layer',
-          type: 'raster',
-          source: 'osm-tiles',
-          minzoom: 0,
-          maxzoom: 19
-        }]
+        layers: [
+          {
+            id: 'osm-tiles-layer',
+            type: 'raster',
+            source: 'osm-tiles',
+            minzoom: 0,
+            maxzoom: 19
+          }
+        ]
       },
-      center: [19.9450, 50.0647],
-      zoom: 12,
-      minZoom: 3,
-      maxZoom: 19,
-      pitchWithRotate: false,
-      dragRotate: false,
-      fadeDuration: 0,
-      trackResize: true,
-      attributionControl: false,
-      touchZoomRotate: true
+      center: [19.9450, 50.0647], // MapLibre takes [lng, lat]
+      zoom: 13,
+      pitch: 0,
+      bearing: 0,
+      attributionControl: false
     });
 
-    this.map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
-
-    // Wait for style to load before adding dynamic sources
-    this.map.on('style.load', () => {
+    this.map.on('load', () => {
+      this.isLoaded = true;
       this._addDynamicSources();
+      this.pendingLayers.forEach(fn => fn());
+      this.pendingLayers = [];
     });
+
+    // Handle touch performance
+    this.map.touchZoomRotate.disableRotation();
   }
 
   _addDynamicSources() {
@@ -135,21 +116,59 @@ export class MapController {
       });
     }
 
-    // Route polyline source
+    // Route polyline sources (Casing + Glow + Core Line + Dotted Pedestrian Track)
     if (!this.map.getSource(this.routeSourceId)) {
       this.map.addSource(this.routeSourceId, {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] }
       });
+
+      // Route dark casing
+      this.map.addLayer({
+        id: 'route-casing',
+        type: 'line',
+        source: this.routeSourceId,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#0f172a',
+          'line-width': 7,
+          'line-opacity': 0.8
+        }
+      });
+
+      // Route main walking neon trail
       this.map.addLayer({
         id: 'route-line',
         type: 'line',
         source: this.routeSourceId,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
         paint: {
-          'line-color': '#4f46e5',
-          'line-width': 3,
-          'line-opacity': 0.85,
-          'line-dasharray': [4, 4]
+          'line-color': '#6366f1',
+          'line-width': 4.5,
+          'line-opacity': 0.95
+        }
+      });
+
+      // Route inner pedestrian dotted track
+      this.map.addLayer({
+        id: 'route-dash',
+        type: 'line',
+        source: this.routeSourceId,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#38bdf8',
+          'line-width': 2,
+          'line-dasharray': [1.5, 2.5],
+          'line-opacity': 0.9
         }
       });
     }
@@ -239,16 +258,18 @@ export class MapController {
     }
   }
 
-  renderDailySpotsAndRoute(origin, spots, onCheckInCallback = null) {
+  renderDailySpotsAndRoute(origin, spots, onCheckInCallback = null, customGeometry = null) {
     this.clearTourMarkers();
     if (!spots || spots.length === 0) return;
 
-    // Draw closed loop route: origin → spot1 → spot2 → spot3 → origin (Point 4)
-    const routeCoords = [
-      [origin.lng, origin.lat],
-      ...spots.map(s => [s.lng, s.lat]),
-      [origin.lng, origin.lat]
-    ];
+    // Use detailed street coordinates if available, otherwise direct straight lines
+    const routeCoords = customGeometry && customGeometry.length > 0
+      ? customGeometry
+      : [
+          [origin.lng, origin.lat],
+          ...spots.map(s => [s.lng, s.lat]),
+          [origin.lng, origin.lat]
+        ];
 
     const routeSrc = this.map.getSource(this.routeSourceId);
     if (routeSrc) {
@@ -275,7 +296,7 @@ export class MapController {
         <div class="spot-popup-content">
           <div class="popup-title">🎯 SPOT #${spot.step || idx + 1}</div>
           <div class="popup-coords">${spot.lat.toFixed(5)}, ${spot.lng.toFixed(5)}</div>
-          <div class="popup-status">${isCheckedIn ? '✅ VISITED' : '📍 IN CITY BOUNDS'}</div>
+          <div class="popup-status">${isCheckedIn ? '✅ VISITED' : '📍 IN WALKING LOOP'}</div>
         </div>
       `;
       popup.setHTML(popupHtml);
@@ -293,17 +314,25 @@ export class MapController {
     });
 
     // Fit map bounds to show entire tour
-    const allCoords = [[origin.lng, origin.lat], ...spots.map(s => [s.lng, s.lat])];
+    this.fitTourBounds(origin, spots, routeCoords);
+  }
+
+  fitTourBounds(origin, spots, routeCoords = null) {
+    const coordsToFit = routeCoords && routeCoords.length > 0
+      ? routeCoords
+      : [[origin.lng, origin.lat], ...spots.map(s => [s.lng, s.lat])];
+
     let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
-    for (const [lng, lat] of allCoords) {
+    for (const [lng, lat] of coordsToFit) {
       if (lng < minLng) minLng = lng;
       if (lng > maxLng) maxLng = lng;
       if (lat < minLat) minLat = lat;
       if (lat > maxLat) maxLat = lat;
     }
+
     this.map.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
       padding: 60,
-      maxZoom: 15,
+      maxZoom: 16,
       duration: 1000
     });
   }

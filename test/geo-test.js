@@ -133,6 +133,22 @@ try {
 }
 assert(threw === true, 'Second shuffle on same day is blocked with MAX_SHUFFLES_REACHED');
 
+// Test 8: In-App Pedestrian RoutingService (Street Snapping & Offline Fallback)
+console.log('\n🔍 Testing In-App Pedestrian RoutingService:');
+const { RoutingService } = await import('../src/geo/routingService.js');
+const testSpots = [
+  { lat: origin.lat + 0.003, lng: origin.lng + 0.003 },
+  { lat: origin.lat + 0.005, lng: origin.lng - 0.002 },
+  { lat: origin.lat - 0.002, lng: origin.lng + 0.004 }
+];
+
+const routeResult = await RoutingService.fetchWalkingLoop(origin, testSpots);
+assert(routeResult !== null, 'RoutingService returns route result');
+assert(routeResult.coordinates.length >= 4, `Route has coordinates (got ${routeResult.coordinates.length} vertices)`);
+assert(routeResult.distanceKm > 0.5, `Route distance is calculated (got ${routeResult.distanceKm} km)`);
+assert(routeResult.durationMinutes > 5, `Route duration is calculated (got ${routeResult.durationMinutes} min)`);
+assert(typeof routeResult.isStreetSnapped === 'boolean', `isStreetSnapped flag is present (got ${routeResult.isStreetSnapped})`);
+
 console.log(`\n========================================`);
 console.log(`Test Results: ${passedTests}/${totalTests} Passed`);
 console.log(`========================================\n`);
