@@ -45,8 +45,20 @@ self.onmessage = async (e) => {
 
     // Encode to JPEG Blob on Worker thread
     const blob = await offscreen.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
-    const reader = new FileReaderSync();
-    const dataUrl = reader.readAsDataURL(blob);
+    
+    let dataUrl;
+    if (typeof FileReaderSync !== 'undefined') {
+      const reader = new FileReaderSync();
+      dataUrl = reader.readAsDataURL(blob);
+    } else {
+      const buffer = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      dataUrl = `data:image/jpeg;base64,${btoa(binary)}`;
+    }
 
     self.postMessage({ status: 'success', dataUrl });
   } catch (err) {

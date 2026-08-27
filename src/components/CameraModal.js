@@ -1,4 +1,5 @@
 import { t } from '../i18n/translations.js';
+import { nativePlatform } from '../utils/nativePlatform.js';
 
 export class CameraModal {
   constructor(lang = 'pl') {
@@ -53,11 +54,20 @@ export class CameraModal {
   }
 
   bindEvents() {
-    this.btnClose.addEventListener('click', () => this.close());
+    this.btnClose.addEventListener('click', () => {
+      nativePlatform.playBlip();
+      this.close();
+    });
     this.btnCapture.addEventListener('click', () => this.capturePhoto());
-    this.btnRetake.addEventListener('click', () => this.retake());
+    this.btnRetake.addEventListener('click', () => {
+      nativePlatform.playBlip();
+      this.retake();
+    });
     this.btnConfirm.addEventListener('click', () => this.confirmPhoto());
-    this.btnSwitchCam.addEventListener('click', () => this.switchCamera());
+    this.btnSwitchCam.addEventListener('click', () => {
+      nativePlatform.playBlip();
+      this.switchCamera();
+    });
 
     // Fallback file input
     this.fileInput.addEventListener('change', (e) => {
@@ -133,6 +143,8 @@ export class CameraModal {
   }
 
   async capturePhoto() {
+    nativePlatform.playShutter();
+
     if (!this.video.videoWidth) {
       this.fileInput.click();
       return;
