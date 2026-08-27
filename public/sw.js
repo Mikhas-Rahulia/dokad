@@ -3,6 +3,7 @@ const CACHE_NAME = 'dokad-pwa-v7';
 const RELATIVE_ASSETS = [
   './',
   './index.html',
+  './manifest.json',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',

@@ -1,6 +1,7 @@
 /**
  * Cross-Platform Passkey & Universal Portable Access Key Authentication.
- * Works seamlessly across Windows, macOS, Linux, iOS Safari, Android Chrome, and Native Android App.
+ * Works seamlessly with 1Password, Bitwarden, Apple Keychain, Google Password Manager,
+ * Windows Hello, Touch ID, Face ID, and Native Android App.
  */
 import { t } from '../i18n/translations.js';
 
@@ -14,16 +15,16 @@ export class PasskeyAuth {
     this.isUnlocked = false;
 
     this.overlay = document.getElementById('passkey-lock-overlay');
+    this.mainPrompt = document.getElementById('passkey-main-prompt');
+    this.keyInputPrompt = document.getElementById('passkey-key-input-prompt');
+
     this.btnUnlockPasskey = document.getElementById('btn-passkey-unlock');
     this.btnRegisterPasskey = document.getElementById('btn-passkey-register');
     this.btnEnterKeyMode = document.getElementById('btn-enter-key-mode');
-    this.btnUseKeyInstead = document.getElementById('btn-use-key-instead');
+    this.btnBackToPasskey = document.getElementById('btn-back-to-passkey');
     this.btnSubmitKey = document.getElementById('btn-submit-access-key');
     this.inputAccessKey = document.getElementById('input-access-key');
     this.statusMsg = document.getElementById('passkey-status-msg');
-    this.registerPrompt = document.getElementById('passkey-register-prompt');
-    this.unlockPrompt = document.getElementById('passkey-unlock-prompt');
-    this.keyInputPrompt = document.getElementById('passkey-key-input-prompt');
     this.activeKeyDisplay = document.getElementById('active-access-key-display');
     this.btnCopyKey = document.getElementById('btn-copy-access-key');
 
@@ -34,7 +35,7 @@ export class PasskeyAuth {
     this.btnEnterKeyText = document.getElementById('btn-enter-key-text');
     this.passkeyHelpText = document.getElementById('passkey-help-text');
     this.btnUnlockText = document.getElementById('btn-unlock-text');
-    this.btnUseKeyText = document.getElementById('btn-use-key-text');
+    this.btnBackPasskeyText = document.getElementById('btn-back-passkey-text');
     this.btnSubmitKeyText = document.getElementById('btn-submit-key-text');
     this.yourDeviceKeyLabel = document.getElementById('your-device-key-label');
     this.btnCopyKeyText = document.getElementById('btn-copy-key-text');
@@ -53,11 +54,11 @@ export class PasskeyAuth {
     const l = this.currentLang;
     if (this.lockTitle) this.lockTitle.textContent = t('lockBrand', l);
     if (this.lockSubtitle) this.lockSubtitle.textContent = t('lockSubtitle', l);
+    if (this.btnUnlockText) this.btnUnlockText.textContent = t('unlockPasskeyBtn', l);
     if (this.btnRegisterText) this.btnRegisterText.textContent = t('setupPasskeyBtn', l);
     if (this.btnEnterKeyText) this.btnEnterKeyText.textContent = t('enterKeyModeBtn', l);
     if (this.passkeyHelpText) this.passkeyHelpText.textContent = t('passkeyHelpText', l);
-    if (this.btnUnlockText) this.btnUnlockText.textContent = t('unlockPasskeyBtn', l);
-    if (this.btnUseKeyText) this.btnUseKeyText.textContent = t('useKeyInsteadBtn', l);
+    if (this.btnBackPasskeyText) this.btnBackPasskeyText.textContent = t('usePasskeyInsteadBtn', l);
     if (this.inputAccessKey) this.inputAccessKey.placeholder = t('keyInputPlaceholder', l);
     if (this.btnSubmitKeyText) this.btnSubmitKeyText.textContent = t('unlockWithKeyBtn', l);
     if (this.yourDeviceKeyLabel) this.yourDeviceKeyLabel.textContent = t('yourActiveKey', l);
@@ -74,8 +75,8 @@ export class PasskeyAuth {
     if (this.btnEnterKeyMode) {
       this.btnEnterKeyMode.addEventListener('click', () => this.showKeyInputView());
     }
-    if (this.btnUseKeyInstead) {
-      this.btnUseKeyInstead.addEventListener('click', () => this.showKeyInputView());
+    if (this.btnBackToPasskey) {
+      this.btnBackToPasskey.addEventListener('click', () => this.showMainPasskeyView());
     }
     if (this.btnSubmitKey) {
       this.btnSubmitKey.addEventListener('click', () => this.verifyManualAccessKey());
@@ -120,43 +121,34 @@ export class PasskeyAuth {
   }
 
   checkInitialState() {
-    const hasCred = this.getSavedCredentialId();
     const accessKey = this.getUniversalAccessKey();
 
     if (this.activeKeyDisplay) {
       this.activeKeyDisplay.textContent = accessKey;
     }
 
-    if (hasCred && this.isPasskeySupported()) {
-      this.showUnlockView();
-      setTimeout(() => this.authenticatePasskey(), 400);
+    if (this.isPasskeySupported()) {
+      this.showMainPasskeyView();
+      // Auto-trigger passkey check if previously authenticated
+      if (this.getSavedCredentialId()) {
+        setTimeout(() => this.authenticatePasskey(true), 300);
+      }
     } else {
-      this.showRegisterView();
+      this.showKeyInputView();
     }
   }
 
-  showRegisterView() {
+  showMainPasskeyView() {
     this.overlay.classList.add('active');
-    this.registerPrompt.style.display = 'flex';
-    this.unlockPrompt.style.display = 'none';
-    this.keyInputPrompt.style.display = 'none';
-    this.statusMsg.textContent = t('passkeyStatusSetKey', this.currentLang);
-    this.statusMsg.style.color = 'var(--pixel-yellow)';
-  }
-
-  showUnlockView() {
-    this.overlay.classList.add('active');
-    this.registerPrompt.style.display = 'none';
-    this.unlockPrompt.style.display = 'flex';
-    this.keyInputPrompt.style.display = 'none';
+    if (this.mainPrompt) this.mainPrompt.style.display = 'flex';
+    if (this.keyInputPrompt) this.keyInputPrompt.style.display = 'none';
     this.statusMsg.textContent = t('passkeyStatusUnlock', this.currentLang);
     this.statusMsg.style.color = 'var(--text-secondary)';
   }
 
   showKeyInputView() {
-    this.registerPrompt.style.display = 'none';
-    this.unlockPrompt.style.display = 'none';
-    this.keyInputPrompt.style.display = 'flex';
+    if (this.mainPrompt) this.mainPrompt.style.display = 'none';
+    if (this.keyInputPrompt) this.keyInputPrompt.style.display = 'flex';
     this.statusMsg.textContent = t('passkeyStatusPasteKey', this.currentLang);
     this.statusMsg.style.color = 'var(--pixel-blue)';
     if (this.inputAccessKey) {
@@ -214,13 +206,14 @@ export class PasskeyAuth {
       window.crypto.getRandomValues(userId);
 
       const hostname = window.location.hostname || 'localhost';
+      const rpId = hostname.includes('github.io') || hostname === 'localhost' ? hostname : undefined;
 
       const createOptions = {
         publicKey: {
           challenge: challenge.buffer,
           rp: {
             name: 'Dokąd? Daily Explorer',
-            id: hostname === 'localhost' || hostname.includes('github.io') ? hostname : undefined
+            id: rpId
           },
           user: {
             id: userId.buffer,
@@ -232,8 +225,10 @@ export class PasskeyAuth {
             { type: 'public-key', alg: -257 }  // RS256
           ],
           authenticatorSelection: {
+            authenticatorAttachment: 'platform',
             userVerification: 'preferred',
-            residentKey: 'preferred'
+            residentKey: 'required',
+            requireResidentKey: true
           },
           timeout: 60000,
           attestation: 'none'
@@ -250,15 +245,20 @@ export class PasskeyAuth {
         setTimeout(() => this.unlockApp(), 600);
       }
     } catch (err) {
-      console.warn('Passkey registration error, falling back to Universal Key:', err);
-      this.showKeyInputView();
+      console.warn('Passkey registration error:', err);
+      this.statusMsg.textContent = '⚠️ ' + (err.message || 'Passkey canceled');
+      this.statusMsg.style.color = 'var(--pixel-yellow)';
     }
   }
 
-  async authenticatePasskey() {
-    const credIdBase64 = this.getSavedCredentialId();
-    if (!credIdBase64 || !this.isPasskeySupported()) {
-      this.showKeyInputView();
+  /**
+   * Authenticates using WebAuthn.
+   * Works on ANY device via password managers (1Password, Bitwarden, iCloud Keychain, Google Password Manager)
+   * using Discoverable Resident Credentials (allowCredentials: []).
+   */
+  async authenticatePasskey(isAuto = false) {
+    if (!this.isPasskeySupported()) {
+      if (!isAuto) this.showKeyInputView();
       return;
     }
 
@@ -267,32 +267,40 @@ export class PasskeyAuth {
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
-      const credId = base64ToArrayBuffer(credIdBase64);
+      const credIdBase64 = this.getSavedCredentialId();
+      const hostname = window.location.hostname || 'localhost';
+      const rpId = hostname.includes('github.io') || hostname === 'localhost' ? hostname : undefined;
 
       const getOptions = {
         publicKey: {
           challenge: challenge.buffer,
+          rpId: rpId,
           timeout: 60000,
           userVerification: 'preferred',
-          allowCredentials: [
-            {
-              type: 'public-key',
-              id: credId
-            }
-          ]
+          // If we have a local ID, include it; otherwise empty array lets Password Manager present discoverable passkeys!
+          allowCredentials: credIdBase64
+            ? [{ type: 'public-key', id: base64ToArrayBuffer(credIdBase64) }]
+            : []
         }
       };
 
       const assertion = await navigator.credentials.get(getOptions);
 
       if (assertion) {
+        // Save credential ID on this device so future unlocks are fast
+        const rawId = arrayBufferToBase64(assertion.rawId);
+        localStorage.setItem(STORAGE_KEY_PASSKEY, rawId);
+
         this.statusMsg.textContent = '✅ ' + t('toastUnlocked', this.currentLang);
         this.statusMsg.style.color = 'var(--pixel-green)';
         setTimeout(() => this.unlockApp(), 400);
       }
     } catch (err) {
-      console.warn('Passkey auth error, showing key input:', err);
-      this.showKeyInputView();
+      console.warn('Passkey authentication error:', err);
+      if (!isAuto) {
+        this.statusMsg.textContent = '⚠️ ' + (err.message || 'Passkey not found in password manager');
+        this.statusMsg.style.color = 'var(--pixel-yellow)';
+      }
     }
   }
 

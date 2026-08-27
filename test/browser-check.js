@@ -1,26 +1,16 @@
 import { chromium } from 'playwright';
-import { spawn } from 'child_process';
+import { preview } from 'vite';
 import path from 'path';
 
 const ARTIFACTS_DIR = 'C:\\Users\\Lenovo\\.gemini\\antigravity\\brain\\b798c2ef-885b-40a4-8202-ecd7f1334a45';
 
 async function runBrowserCheck() {
-  const server = spawn('npx.cmd', ['vite', 'preview', '--port', '5199', '--strictPort'], {
-    cwd: process.cwd(),
-    shell: true,
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-
-  server.stdout.on('data', (d) => console.log(`[Vite] ${d}`));
-  server.stderr.on('data', (d) => console.error(`[Vite ERR] ${d}`));
-
-  await new Promise((resolve) => {
-    server.stdout.on('data', (d) => {
-      if (d.toString().includes('Local:')) {
-        resolve();
-      }
-    });
-    setTimeout(resolve, 3000);
+  console.log('🚀 Starting Vite preview server programmatically...');
+  const previewServer = await preview({
+    preview: {
+      port: 5199,
+      strictPort: true
+    }
   });
 
   console.log('🌐 Launching Chromium browser with mock GPS...');
@@ -50,11 +40,11 @@ async function runBrowserCheck() {
   await page.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1000);
 
-  console.log('📸 Screenshot 1: Passkey Registration View...');
+  console.log('📸 Screenshot 1: Passkey Registration / Unlock View...');
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_1_passkey.png') });
 
   // Register Passkey via virtual authenticator
-  console.log('🔑 Registering Passkey...');
+  console.log('🔑 Creating / Registering Passkey...');
   await page.click('#btn-passkey-register');
   await page.waitForTimeout(800);
 
@@ -84,7 +74,7 @@ async function runBrowserCheck() {
   await page.waitForTimeout(500);
 
   await browser.close();
-  server.kill();
+  previewServer.httpServer.close();
   console.log('✅ Full automated browser verification succeeded!');
   process.exit(0);
 }
