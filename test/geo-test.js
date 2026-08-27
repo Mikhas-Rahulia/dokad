@@ -82,6 +82,43 @@ const gUrl = getGoogleMapsOptimalRouteUrl(origin, orderedSpots);
 assert(gUrl.includes('travelmode=walking'), 'Google Maps URL specifies walking mode');
 assert(gUrl.includes('waypoints='), 'Google Maps URL contains waypoints');
 
+// Test 7: StreakService 1 Shuffle Per Day Limit
+console.log('\n🔍 Testing StreakService 1 Shuffle Per Day Limit:');
+// Mock localStorage for Node test environment
+const mockStorage = {};
+global.localStorage = {
+  getItem: (k) => mockStorage[k] || null,
+  setItem: (k, v) => { mockStorage[k] = String(v); },
+  removeItem: (k) => { delete mockStorage[k]; }
+};
+
+const { StreakService } = await import('../src/geo/streakService.js');
+const streakService = new StreakService();
+
+assert(streakService.canShuffleToday() === true, 'Initially allows shuffle today');
+assert(streakService.getShufflesRemaining() === 1, 'Initially has 1 shuffle remaining');
+
+const daily1 = streakService.initDailySpots(origin, null, false);
+assert(daily1.spots.length === 3, 'Initial generation creates 3 spots');
+assert(daily1.shufflesUsed === 0, 'Initial generation uses 0 shuffles');
+assert(streakService.getShufflesRemaining() === 1, 'Still has 1 shuffle remaining after initial generation');
+
+// Perform the 1 allowed shuffle
+const daily2 = streakService.initDailySpots(origin, null, true);
+assert(daily2.spots.length === 3, 'First shuffle generates 3 new spots');
+assert(daily2.shufflesUsed === 1, 'First shuffle sets shufflesUsed = 1');
+assert(streakService.canShuffleToday() === false, 'Can no longer shuffle today');
+assert(streakService.getShufflesRemaining() === 0, 'Has 0 shuffles remaining');
+
+// Attempting second shuffle must throw error
+let threw = false;
+try {
+  streakService.initDailySpots(origin, null, true);
+} catch (err) {
+  threw = err.message === 'MAX_SHUFFLES_REACHED';
+}
+assert(threw === true, 'Second shuffle on same day is blocked with MAX_SHUFFLES_REACHED');
+
 console.log(`\n========================================`);
 console.log(`Test Results: ${passedTests}/${totalTests} Passed`);
 console.log(`========================================\n`);

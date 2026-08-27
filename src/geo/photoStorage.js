@@ -32,6 +32,9 @@ class PhotoStorage {
   }
 
   initDB() {
+    if (typeof indexedDB === 'undefined') {
+      return Promise.resolve(null);
+    }
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = (e) => {

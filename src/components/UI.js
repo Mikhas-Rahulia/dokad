@@ -134,7 +134,10 @@ export class AppUI {
 
     // Tour Card
     if (this.routeText) this.routeText.textContent = t('openGoogleMaps', lang);
-    if (this.btnRerollText) this.btnRerollText.textContent = t('rerollSpots', lang);
+    if (this.btnRerollText) {
+      const shufflesLeft = this.streakService.getShufflesRemaining();
+      this.btnRerollText.textContent = `${t('rerollSpots', lang)} (${shufflesLeft}/1)`;
+    }
 
     // Re-render active tour with current language strings
     if (this.dailyState) {
@@ -237,9 +240,20 @@ export class AppUI {
   }
 
   generateDailyTour(isReroll = false) {
+    if (isReroll && !this.streakService.canShuffleToday()) {
+      this.showToast(t('toastShuffleLimit', this.currentLang));
+      if ('vibrate' in navigator) navigator.vibrate(80);
+      return;
+    }
+
     const origin = this.userLocation || { lat: 50.0647, lng: 19.9450 };
 
-    this.dailyState = this.streakService.initDailySpots(origin);
+    try {
+      this.dailyState = this.streakService.initDailySpots(origin, null, isReroll);
+    } catch {
+      this.showToast(t('toastShuffleLimit', this.currentLang));
+      return;
+    }
 
     this.map.renderDailySpotsAndRoute(origin, this.dailyState.spots, (idx) => this.promptPhotoVerification(idx));
     this.renderTourUI();
@@ -263,6 +277,22 @@ export class AppUI {
     this.tourProgressBadge.textContent = `${completedCount}/3 ${t('completedBadge', this.currentLang)}`;
     this.tourProgressBadge.className = `pixel-badge progress-badge ${completedCount === 3 ? 'all-done' : ''}`;
     this.tourDistanceBadge.textContent = `🚶 ${totalDistStr} ${t('routeBadge', this.currentLang)}`;
+
+    // 1 Shuffle per day limit status
+    const shufflesLeft = this.streakService.getShufflesRemaining();
+    if (this.btnRerollDaily && this.btnRerollText) {
+      if (shufflesLeft <= 0) {
+        this.btnRerollDaily.disabled = true;
+        this.btnRerollDaily.classList.add('disabled');
+        this.btnRerollDaily.title = t('noShufflesLeft', this.currentLang);
+        this.btnRerollText.textContent = `${t('rerollSpots', this.currentLang)} (0/1)`;
+      } else {
+        this.btnRerollDaily.disabled = false;
+        this.btnRerollDaily.classList.remove('disabled');
+        this.btnRerollDaily.title = t('oneShuffleLeft', this.currentLang);
+        this.btnRerollText.textContent = `${t('rerollSpots', this.currentLang)} (1/1)`;
+      }
+    }
 
     this.spotsList.innerHTML = '';
 

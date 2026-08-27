@@ -8,6 +8,7 @@ import { photoStorage } from './photoStorage.js';
 
 const STORAGE_KEY_DAILY = 'dokad_daily_state_v5';
 const STORAGE_KEY_STREAK = 'dokad_streak_stats_v5';
+const MAX_SHUFFLES_PER_DAY = 1;
 
 export class StreakService {
   constructor() {
@@ -82,12 +83,46 @@ export class StreakService {
   }
 
   /**
+   * Checks if user can still shuffle today (max 1 shuffle per day).
+   * @returns {boolean}
+   */
+  canShuffleToday() {
+    const state = this.getDailyState();
+    if (!state) return true;
+    const used = state.shufflesUsed || 0;
+    return used < MAX_SHUFFLES_PER_DAY;
+  }
+
+  /**
+   * Returns remaining shuffles today (0 or 1).
+   * @returns {number}
+   */
+  getShufflesRemaining() {
+    const state = this.getDailyState();
+    if (!state) return MAX_SHUFFLES_PER_DAY;
+    const used = state.shufflesUsed || 0;
+    return Math.max(0, MAX_SHUFFLES_PER_DAY - used);
+  }
+
+  /**
    * Initializes 3 daily spots strictly inside city boundary or within 2 km radius.
+   * Enforces max 1 shuffle per day.
    * @param {{lat: number, lng: number}} origin
    * @param {Object|null} city
+   * @param {boolean} isShuffle
    * @returns {Object}
    */
-  initDailySpots(origin, city = null) {
+  initDailySpots(origin, city = null, isShuffle = false) {
+    const existing = this.getDailyState();
+    let shufflesUsed = existing ? (existing.shufflesUsed || 0) : 0;
+
+    if (isShuffle) {
+      if (shufflesUsed >= MAX_SHUFFLES_PER_DAY) {
+        throw new Error('MAX_SHUFFLES_REACHED');
+      }
+      shufflesUsed += 1;
+    }
+
     let rawSpots = [];
     if (city && city.geojson) {
       rawSpots = generate3SpotsInCity(city.geojson, 3);
@@ -113,6 +148,8 @@ export class StreakService {
       spots: spotsWithStatus,
       totalDistanceKm,
       legs,
+      shufflesUsed,
+      maxShuffles: MAX_SHUFFLES_PER_DAY,
       completed: false
     };
 
@@ -147,7 +184,7 @@ export class StreakService {
       };
     }
 
-    // Save photo to IndexedDB
+    // Save photo to IndexedDB / OPFS
     try {
       await photoStorage.savePhoto(state.date, spotIndex, photoDataUrl, {
         lat: spot.lat,

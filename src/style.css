@@ -129,6 +129,16 @@ html, body {
   font-size: 0.75rem;
 }
 
+.pixel-btn:disabled,
+.pixel-btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: var(--pixel-shadow) !important;
+}
+
 /* Pixel Icon Button */
 .pixel-icon-btn {
   font-family: var(--font-pixel);

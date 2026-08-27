@@ -22,7 +22,9 @@ export const translations = {
     takePhotoBtn: '📸 ZRÓB ZDJĘCIE',
     verifiedText: 'ODWIEDZONE',
     openGoogleMaps: '🗺️ GOOGLE MAPS',
-    rerollSpots: '🎲 NOWE 3 PUNKTY',
+    rerollSpots: '🎲 PRZETASUJ (1 DZIENNIE)',
+    noShufflesLeft: 'Wykorzystano dzisiejsze przetasowanie (0/1)',
+    oneShuffleLeft: 'Dostępne 1 przetasowanie na dziś (1/1)',
     lockBrand: 'DOKĄD? PRIVATE',
     lockSubtitle: 'Ochrona biometryczna i klucz dostępu',
     passkeyStatusInit: 'INICJALIZACJA...',
@@ -61,8 +63,9 @@ export const translations = {
     toastKeyCopied: '📋 KLUCZ SKOPIOWANY DO SCHOWKA',
     toastKeyVerified: '✅ KLUCZ DOSTĘPU ZWERYFIKOWANY!',
     toastKeyInvalid: '❌ NIEPRAWIDŁOWY KLUCZ (UŻYJ DOKAD-XXXX-XXXX-XXXX)',
-    toastNewSpots: '🎲 WYGENEROWANO 3 NOWE PUNKTY!',
-    toastSpotsReady: '🎯 DZISIEJSZE 3 PUNKTY SĄ GOTOWE!'
+    toastNewSpots: '🎲 PRZETASOWANO! NOWE 3 PUNKTY!',
+    toastSpotsReady: '🎯 DZISIEJSZE 3 PUNKTY SĄ GOTOWE!',
+    toastShuffleLimit: '⚠️ Limit: dozwolone tylko 1 przetasowanie dziennie!'
   },
 
   ru: {
@@ -83,7 +86,9 @@ export const translations = {
     takePhotoBtn: '📸 СДЕЛАТЬ ФОТО',
     verifiedText: 'ПОСЕЩЕНО',
     openGoogleMaps: '🗺️ GOOGLE MAPS',
-    rerollSpots: '🎲 НОВЫЕ 3 ТОЧКИ',
+    rerollSpots: '🎲 ПЕРЕМЕШАТЬ (1 В ДЕНЬ)',
+    noShufflesLeft: 'Перемешивание на сегодня использовано (0/1)',
+    oneShuffleLeft: 'Доступно 1 перемешивание на сегодня (1/1)',
     lockBrand: 'КУДА? PRIVATE',
     lockSubtitle: 'Биометрическая защита и ключ доступа',
     passkeyStatusInit: 'ИНИЦИАЛИЗАЦИЯ...',
@@ -122,8 +127,9 @@ export const translations = {
     toastKeyCopied: '📋 КЛЮЧ СКОПИРОВАН В БУФЕР ОБМЕНА',
     toastKeyVerified: '✅ КЛЮЧ ДОСТУПА ПОДТВЕРЖДЕН!',
     toastKeyInvalid: '❌ НЕВЕРНЫЙ КЛЮЧ (ИСПОЛЬЗУЙТЕ DOKAD-XXXX-XXXX-XXXX)',
-    toastNewSpots: '🎲 СГЕНЕРИРОВАНЫ 3 НОВЫЕ ТОЧКИ!',
-    toastSpotsReady: '🎯 3 ТОЧКИ НА СЕГОДНЯ ГОТОВЫ!'
+    toastNewSpots: '🎲 ПЕРЕМЕШАНО! 3 НОВЫЕ ТОЧКИ!',
+    toastSpotsReady: '🎯 3 ТОЧКИ НА СЕГОДНЯ ГОТОВЫ!',
+    toastShuffleLimit: '⚠️ Лимит исчерпан: доступно только 1 перемешивание в день!'
   },
 
   be: {
@@ -144,7 +150,9 @@ export const translations = {
     takePhotoBtn: '📸 ЗРАБІЦЬ ФОТА',
     verifiedText: 'НАВЕДАНА',
     openGoogleMaps: '🗺️ GOOGLE MAPS',
-    rerollSpots: '🎲 НОВЫЯ 3 ПУНКТЫ',
+    rerollSpots: '🎲 ПЕРАМЯШАЦЬ (1 У ДЗЕНЬ)',
+    noShufflesLeft: 'Перамешванне на сёння выкарыстана (0/1)',
+    oneShuffleLeft: 'Даступна 1 перамешванне на сёння (1/1)',
     lockBrand: 'КУДЫ? PRIVATE',
     lockSubtitle: 'Біяметрычная абарона і ключ доступу',
     passkeyStatusInit: 'ІНІЦЫЯЛІЗАЦЫЯ...',
@@ -183,8 +191,9 @@ export const translations = {
     toastKeyCopied: '📋 КЛЮЧ СКАПІЯВАНЫ Ў БУФЕР',
     toastKeyVerified: '✅ КЛЮЧ ДОСТУПУ ПАЦВЕРДЖАНЫ!',
     toastKeyInvalid: '❌ НЯПРАВІЛЬНЫ КЛЮЧ (ВЫКАРЫСТОЎВАЙЦЕ DOKAD-XXXX-XXXX-XXXX)',
-    toastNewSpots: '🎲 ЗГЕНЕРАВАНЫ 3 НОВЫЯ ПУНКТЫ!',
-    toastSpotsReady: '🎯 3 ПУНКТЫ НА СЁННЯ ГАТОВЫ!'
+    toastNewSpots: '🎲 ПЕРАМЯШАНА! 3 НОВЫЯ ПУНКТЫ!',
+    toastSpotsReady: '🎯 3 ПУНКТЫ НА СЁННЯ ГАТОВЫ!',
+    toastShuffleLimit: '⚠️ Ліміт вычарпаны: даступна толькі 1 перамешванне ў дзень!'
   },
 
   nl: {
@@ -205,7 +214,9 @@ export const translations = {
     takePhotoBtn: '📸 MAAK FOTO',
     verifiedText: 'BEZOCHT',
     openGoogleMaps: '🗺️ GOOGLE MAPS',
-    rerollSpots: '🎲 NIEUWE 3 PLEKKEN',
+    rerollSpots: '🎲 HUSSELEN (1 PER DAG)',
+    noShufflesLeft: 'Dagelijkse husselbeurt verbruikt (0/1)',
+    oneShuffleLeft: '1 husselbeurt beschikbaar vandaag (1/1)',
     lockBrand: 'WAARHEEN? PRIVATE',
     lockSubtitle: 'Biometrische beveiliging en toegangssleutel',
     passkeyStatusInit: 'INITIALISEREN...',
@@ -244,8 +255,9 @@ export const translations = {
     toastKeyCopied: '📋 SLEUTEL GEKOPIEERD NAAR KLIPBORD',
     toastKeyVerified: '✅ TOEGANGSSLEUTEL GECONTROLEERD!',
     toastKeyInvalid: '❌ ONGELDIGE SLEUTEL (GEBRUIK DOKAD-XXXX-XXXX-XXXX)',
-    toastNewSpots: '🎲 3 NIEUWE PLEKKEN GEGENEREERD!',
-    toastSpotsReady: '🎯 DE 3 PLEKKEN VAN VANDAAG STAAN KLAAR!'
+    toastNewSpots: '🎲 GEHUSSELD! 3 NIEUWE PLEKKEN!',
+    toastSpotsReady: '🎯 DE 3 PLEKKEN VAN VANDAAG STAAN KLAAR!',
+    toastShuffleLimit: '⚠️ Limiet bereikt: slechts 1 keer opnieuw husselen per dag!'
   },
 
   en: {
@@ -266,7 +278,9 @@ export const translations = {
     takePhotoBtn: '📸 TAKE PHOTO',
     verifiedText: 'VERIFIED',
     openGoogleMaps: '🗺️ GOOGLE MAPS',
-    rerollSpots: '🎲 NEW 3 SPOTS',
+    rerollSpots: '🎲 SHUFFLE (1 PER DAY)',
+    noShufflesLeft: 'Daily shuffle used (0/1)',
+    oneShuffleLeft: '1 shuffle remaining today (1/1)',
     lockBrand: 'WHERE TO? PRIVATE',
     lockSubtitle: 'Biometric & Access Key Protection',
     passkeyStatusInit: 'INITIALIZING...',
@@ -305,8 +319,9 @@ export const translations = {
     toastKeyCopied: '📋 ACCESS KEY COPIED TO CLIPBOARD',
     toastKeyVerified: '✅ ACCESS KEY VERIFIED!',
     toastKeyInvalid: '❌ INVALID KEY (USE DOKAD-XXXX-XXXX-XXXX)',
-    toastNewSpots: '🎲 3 NEW SPOTS GENERATED!',
-    toastSpotsReady: '🎯 TODAY\'S 3 DESTINATIONS READY!'
+    toastNewSpots: '🎲 SHUFFLED! 3 NEW SPOTS!',
+    toastSpotsReady: '🎯 TODAY\'S 3 DESTINATIONS READY!',
+    toastShuffleLimit: '⚠️ Limit reached: only 1 shuffle allowed per day!'
   }
 };
 
