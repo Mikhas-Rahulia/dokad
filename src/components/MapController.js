@@ -318,8 +318,11 @@ export class MapController {
     }
   }
 
-  recenterUser() {
-    if (this.userMarker) {
+  recenterUser(lat, lng) {
+    if (lat !== undefined && lng !== undefined) {
+      this.setUserLocation(lat, lng);
+      this.map.flyTo({ center: [lng, lat], zoom: 16, duration: 800 });
+    } else if (this.userMarker) {
       const lngLat = this.userMarker.getLngLat();
       this.map.flyTo({ center: lngLat, zoom: 16, duration: 800 });
     }

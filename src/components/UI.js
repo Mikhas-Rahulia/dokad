@@ -23,6 +23,7 @@ export class AppUI {
     this.lastGpsTimestamp = null;
     this.dailyState = null;
     this.watchId = null;
+    this.hasInitialGpsCentered = false;
 
     this.cacheElements();
     this.initComponents();
@@ -31,6 +32,7 @@ export class AppUI {
     this.updateStreakBadge();
     this.initGeolocation();
     this.loadTodayTour();
+    this.fallbackIpLocationPreload();
   }
 
   detectLanguage() {
@@ -101,7 +103,7 @@ export class AppUI {
       nativePlatform.playCoin();
       this.showToast(t('toastUnlocked', this.currentLang));
       if (this.userLocation) {
-        this.map.recenterUser();
+        this.centerOnUser();
       }
     }, this.currentLang);
   }
@@ -223,7 +225,7 @@ export class AppUI {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // DUAL-PHASE GPS: Instant coarse → precise GNSS with battery mgmt
+  // HIGH-PRECISION GNSS GEOLOCATION ENGINE
   // ═══════════════════════════════════════════════════════════════
   initGeolocation() {
     if (!navigator.geolocation) {
@@ -237,12 +239,24 @@ export class AppUI {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude
       };
-      this.userAccuracy = pos.coords.accuracy || 20;
+      this.userAccuracy = pos.coords.accuracy || 15;
       this.lastGpsTimestamp = new Date();
 
       // Update map marker and accuracy circle
       this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, this.userAccuracy);
       this.updateSpotsLiveDistances();
+
+      // On first GPS lock, center map on the user if no tour is active
+      if (!this.hasInitialGpsCentered && (!this.dailyState || !this.dailyState.spots)) {
+        this.hasInitialGpsCentered = true;
+        if (this.map && this.map.map) {
+          this.map.map.flyTo({
+            center: [this.userLocation.lng, this.userLocation.lat],
+            zoom: 15,
+            duration: 1200
+          });
+        }
+      }
 
       // Update Header GPS Status Pill
       if (this.gpsStatusHeaderText) {
@@ -254,8 +268,8 @@ export class AppUI {
     };
 
     const onErr = (err) => {
-      console.warn('GPS error:', err.message);
-      if (this.gpsStatusHeaderText) {
+      console.warn('GPS position error:', err.code, err.message);
+      if (this.gpsStatusHeaderText && !this.userLocation) {
         this.gpsStatusHeaderText.textContent = 'GPS ⚠️';
       }
       if (this.gpsDiagStatus) {
@@ -264,20 +278,20 @@ export class AppUI {
       }
     };
 
-    // Phase 1: Instant coarse position from Wi-Fi/Cell cache (~50ms)
+    // 1. Instant high-accuracy single shot
     navigator.geolocation.getCurrentPosition(onPos, onErr, {
-      enableHighAccuracy: false,
-      timeout: 2000,
-      maximumAge: 60000
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
     });
 
-    // Phase 2: High-accuracy GNSS continuous tracking
+    // 2. Continuous GNSS live stream
     const startPrecisionWatch = () => {
       if (this.watchId !== null) return;
       this.watchId = navigator.geolocation.watchPosition(onPos, onErr, {
         enableHighAccuracy: true,
         maximumAge: 2000,
-        timeout: 10000
+        timeout: 20000
       });
     };
 
@@ -298,6 +312,30 @@ export class AppUI {
         startPrecisionWatch();
       }
     });
+  }
+
+  /**
+   * Fast IP-based coarse fallback to center the map near the user's city
+   * while hardware GNSS satellites are acquiring lock.
+   */
+  async fallbackIpLocationPreload() {
+    if (this.userLocation) return;
+
+    try {
+      const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.latitude && data.longitude && !this.userLocation && !this.hasInitialGpsCentered) {
+          if (this.map && this.map.map) {
+            this.map.map.flyTo({
+              center: [data.longitude, data.latitude],
+              zoom: 12,
+              duration: 800
+            });
+          }
+        }
+      }
+    } catch {}
   }
 
   openGpsDiagnostics() {
@@ -331,7 +369,7 @@ export class AppUI {
         this.gpsDiagStatus.className = 'gps-diag-val live';
       }
     } else {
-      if (this.gpsDiagCoords) this.gpsDiagCoords.textContent = 'Locating...';
+      if (this.gpsDiagCoords) this.gpsDiagCoords.textContent = 'Acquiring satellite lock...';
       if (this.gpsDiagAccuracy) this.gpsDiagAccuracy.textContent = '--';
       if (this.gpsDiagTime) this.gpsDiagTime.textContent = '--';
     }
@@ -360,13 +398,19 @@ export class AppUI {
     nativePlatform.playBlip();
     this.showToast(t('toastGpsWait', this.currentLang));
 
+    if (!navigator.geolocation) {
+      nativePlatform.playError();
+      this.showToast(t('toastGpsReq', this.currentLang));
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         this.userLocation = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude
         };
-        this.userAccuracy = pos.coords.accuracy || 15;
+        this.userAccuracy = pos.coords.accuracy || 10;
         this.lastGpsTimestamp = new Date();
 
         this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, this.userAccuracy);
@@ -383,15 +427,16 @@ export class AppUI {
       },
       (err) => {
         nativePlatform.playError();
-        this.showToast(`⚠️ GPS: ${err.message}`);
+        this.showToast(`⚠️ GPS Error: ${err.message}`);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   }
 
   centerOnUser() {
     if (this.userLocation) {
       this.map.recenterUser();
+      this.showToast(`📍 ${this.userLocation.lat.toFixed(4)}, ${this.userLocation.lng.toFixed(4)} (±${Math.round(this.userAccuracy || 10)}m)`);
     } else {
       this.forceGpsReacquire();
     }
@@ -422,7 +467,7 @@ export class AppUI {
     }
   }
 
-  generateDailyTour(isReroll = false) {
+  async generateDailyTour(isReroll = false) {
     if (isReroll && !this.streakService.canShuffleToday()) {
       nativePlatform.playError();
       this.showToast(t('toastShuffleLimit', this.currentLang));
@@ -431,7 +476,33 @@ export class AppUI {
     }
 
     nativePlatform.playBlip();
-    const origin = this.userLocation || { lat: 50.0647, lng: 19.9450 };
+
+    // If we don't have userLocation yet, actively acquire GPS lock first!
+    if (!this.userLocation) {
+      this.showToast(t('toastGpsWait', this.currentLang));
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 0
+          });
+        });
+        this.userLocation = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+        this.userAccuracy = pos.coords.accuracy || 15;
+        this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, this.userAccuracy);
+      } catch (err) {
+        console.warn('GPS acquire error during tour generation:', err);
+        // Fallback to currently centered map center if GPS fails
+        const mapCenter = this.map.map.getCenter();
+        this.userLocation = { lat: mapCenter.lat, lng: mapCenter.lng };
+      }
+    }
+
+    const origin = this.userLocation;
 
     try {
       this.dailyState = this.streakService.initDailySpots(origin, null, isReroll);
