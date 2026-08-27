@@ -1,6 +1,7 @@
 /**
  * OffscreenCanvas Watermark Worker
- * Processes photos, renders retro watermark stamp, and encodes JPEG off the main thread.
+ * Processes photos, renders retro watermark stamp with website URL and anthropological coordinates,
+ * and encodes JPEG off the main thread.
  * Zero UI freeze, runs 100% on background worker thread.
  */
 
@@ -23,28 +24,40 @@ self.onmessage = async (e) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const dateStr = now.toLocaleDateString();
-    const spotText = `DOKĄD? SPOT #${meta?.step || 1}`;
-    const coordsText = meta ? `${meta.lat.toFixed(4)}, ${meta.lng.toFixed(4)}` : '';
+    const step = meta?.step || 1;
+    const coordsText = meta && meta.lat ? `${meta.lat.toFixed(5)}°N, ${meta.lng.toFixed(5)}°E` : '';
+    const website = 'mikhas-rahulia.github.io/dokad';
 
-    const fontSize = Math.max(16, Math.round(width * 0.035));
-    ctx.font = `bold ${fontSize}px sans-serif, monospace`;
+    const fontSize = Math.max(15, Math.round(width * 0.032));
+    const subFontSize = Math.round(fontSize * 0.78);
+    const microFontSize = Math.round(fontSize * 0.68);
 
-    // Bottom banner background
-    const barHeight = fontSize * 2.6;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    // 3-line bottom banner background
+    const barHeight = fontSize * 3.6;
+    ctx.fillStyle = 'rgba(12, 15, 23, 0.85)';
     ctx.fillRect(0, height - barHeight, width, barHeight);
 
-    // Pixel yellow text
+    // Accent top border line on banner
     ctx.fillStyle = '#facc15';
-    ctx.fillText(`${spotText} • ${timeStr}`, 16, height - barHeight + fontSize + 4);
+    ctx.fillRect(0, height - barHeight, width, 3);
 
-    // Cyan coordinates
+    // Line 1: Spot & Time
+    ctx.font = `bold ${fontSize}px "Pixelify Sans", monospace, sans-serif`;
+    ctx.fillStyle = '#facc15';
+    ctx.fillText(`🕹️ DOKĄD? SPOT #${step} • ${timeStr}`, 16, height - barHeight + fontSize + 6);
+
+    // Line 2: Date & GPS Coordinates
+    ctx.font = `${subFontSize}px monospace, sans-serif`;
     ctx.fillStyle = '#38bdf8';
-    ctx.font = `${Math.round(fontSize * 0.8)}px monospace`;
-    ctx.fillText(`📅 ${dateStr} • 📍 ${coordsText}`, 16, height - 12);
+    ctx.fillText(`📅 ${dateStr} • 📍 ${coordsText}`, 16, height - barHeight + fontSize + subFontSize + 12);
+
+    // Line 3: Website & Anthropology Mission
+    ctx.font = `bold ${microFontSize}px monospace, sans-serif`;
+    ctx.fillStyle = '#4ade80';
+    ctx.fillText(`🌐 ${website} • Local Anthropology & Physical Activity`, 16, height - 10);
 
     // Encode to JPEG Blob on Worker thread
-    const blob = await offscreen.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+    const blob = await offscreen.convertToBlob({ type: 'image/jpeg', quality: 0.88 });
     
     let dataUrl;
     if (typeof FileReaderSync !== 'undefined') {

@@ -15,6 +15,8 @@ export class CameraModal {
     this.btnRetake = document.getElementById('btn-camera-retake');
     this.btnClose = document.getElementById('modal-camera-close');
     this.btnSwitchCam = document.getElementById('btn-camera-switch');
+    this.btnSaveGallery = document.getElementById('btn-camera-save-gallery');
+    this.btnSaveGalleryText = document.getElementById('btn-save-gallery-text');
     this.fileInput = document.getElementById('camera-file-input');
     this.cameraTitle = document.getElementById('camera-modal-title');
     this.btnRetakeText = document.getElementById('btn-retake-text');
@@ -51,6 +53,7 @@ export class CameraModal {
     }
     if (this.btnRetakeText) this.btnRetakeText.textContent = t('cameraRetakeBtn', l);
     if (this.btnConfirmText) this.btnConfirmText.textContent = t('cameraConfirmBtn', l);
+    if (this.btnSaveGalleryText) this.btnSaveGalleryText.textContent = t('saveToGalleryBtn', l);
   }
 
   bindEvents() {
@@ -69,6 +72,10 @@ export class CameraModal {
       this.switchCamera();
     });
 
+    if (this.btnSaveGallery) {
+      this.btnSaveGallery.addEventListener('click', () => this.saveWatermarkedPhotoToGallery());
+    }
+
     // Fallback file input
     this.fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -82,12 +89,6 @@ export class CameraModal {
     });
   }
 
-  /**
-   * Opens the camera viewfinder for a given spot.
-   * @param {number} spotIndex
-   * @param {Object} spotMeta { step, lat, lng }
-   * @param {Function} onConfirm
-   */
   async open(spotIndex, spotMeta, onConfirm) {
     this.currentSpotIndex = spotIndex;
     this.currentSpotMeta = spotMeta;
@@ -154,7 +155,7 @@ export class CameraModal {
       // Zero-latency GPU frame grab
       const bitmap = await createImageBitmap(this.video);
 
-      // If Web Worker + OffscreenCanvas is available, offload 100% of watermarking and JPEG compression
+      // OffscreenCanvas worker
       if (this.watermarkWorker) {
         const meta = {
           step: this.currentSpotMeta?.step || this.currentSpotIndex + 1,
@@ -193,7 +194,7 @@ export class CameraModal {
     ctx.drawImage(this.video, 0, 0, width, height);
     this.stampWatermark(ctx, width, height);
 
-    this.capturedDataUrl = this.canvas.toDataURL('image/jpeg', 0.85);
+    this.capturedDataUrl = this.canvas.toDataURL('image/jpeg', 0.88);
     this.showPreview(this.capturedDataUrl);
     this.stopStream();
   }
@@ -206,7 +207,7 @@ export class CameraModal {
       const ctx = this.canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
       this.stampWatermark(ctx, img.width, img.height);
-      this.capturedDataUrl = this.canvas.toDataURL('image/jpeg', 0.85);
+      this.capturedDataUrl = this.canvas.toDataURL('image/jpeg', 0.88);
       this.showPreview(this.capturedDataUrl);
     };
     img.src = dataUrl;
@@ -216,30 +217,58 @@ export class CameraModal {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const dateStr = now.toLocaleDateString();
-    const spotText = `DOKĄD? SPOT #${this.currentSpotMeta?.step || this.currentSpotIndex + 1}`;
-    const coordsText = this.currentSpotMeta ? `${this.currentSpotMeta.lat.toFixed(4)}, ${this.currentSpotMeta.lng.toFixed(4)}` : '';
+    const step = this.currentSpotMeta?.step || this.currentSpotIndex + 1;
+    const coordsText = this.currentSpotMeta ? `${this.currentSpotMeta.lat.toFixed(5)}°N, ${this.currentSpotMeta.lng.toFixed(5)}°E` : '';
+    const website = 'mikhas-rahulia.github.io/dokad';
 
-    const fontSize = Math.max(16, Math.round(width * 0.035));
-    ctx.font = `bold ${fontSize}px "Pixelify Sans", monospace, sans-serif`;
+    const fontSize = Math.max(15, Math.round(width * 0.032));
+    const subFontSize = Math.round(fontSize * 0.78);
+    const microFontSize = Math.round(fontSize * 0.68);
 
-    // Bottom pill background
-    const barHeight = fontSize * 2.6;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    const barHeight = fontSize * 3.6;
+    ctx.fillStyle = 'rgba(12, 15, 23, 0.85)';
     ctx.fillRect(0, height - barHeight, width, barHeight);
 
-    // Pixel yellow & green text
     ctx.fillStyle = '#facc15';
-    ctx.fillText(`${spotText} • ${timeStr}`, 16, height - barHeight + fontSize + 4);
+    ctx.fillRect(0, height - barHeight, width, 3);
 
+    // Line 1: Spot & Time
+    ctx.font = `bold ${fontSize}px "Pixelify Sans", monospace, sans-serif`;
+    ctx.fillStyle = '#facc15';
+    ctx.fillText(`🕹️ DOKĄD? SPOT #${step} • ${timeStr}`, 16, height - barHeight + fontSize + 6);
+
+    // Line 2: Date & Coordinates
+    ctx.font = `${subFontSize}px monospace, sans-serif`;
     ctx.fillStyle = '#38bdf8';
-    ctx.font = `${Math.round(fontSize * 0.8)}px monospace`;
-    ctx.fillText(`📅 ${dateStr} • 📍 ${coordsText}`, 16, height - 12);
+    ctx.fillText(`📅 ${dateStr} • 📍 ${coordsText}`, 16, height - barHeight + fontSize + subFontSize + 12);
+
+    // Line 3: Website & Anthropology Mission
+    ctx.font = `bold ${microFontSize}px monospace, sans-serif`;
+    ctx.fillStyle = '#4ade80';
+    ctx.fillText(`🌐 ${website} • Local Anthropology & Physical Activity`, 16, height - 10);
   }
 
   showPreview(dataUrl) {
     this.previewImg.src = dataUrl;
     this.viewfinderContainer.style.display = 'none';
     this.previewContainer.style.display = 'flex';
+  }
+
+  saveWatermarkedPhotoToGallery() {
+    if (!this.capturedDataUrl) return;
+    nativePlatform.playBlip();
+
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const step = this.currentSpotMeta?.step || this.currentSpotIndex + 1;
+    const filename = `dokad_watermarked_${dateStr}_spot_${step}.jpg`;
+
+    const a = document.createElement('a');
+    a.href = this.capturedDataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   retake() {

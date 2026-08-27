@@ -1,11 +1,35 @@
 import { Map, Marker, Popup, AttributionControl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+function createGeoJSONCircle(lat, lng, radiusMeters = 20, points = 32) {
+  const coords = [];
+  const km = Math.max(5, Math.min(radiusMeters, 500)) / 1000;
+  const distanceX = km / (111.32 * Math.cos(lat * Math.PI / 180));
+  const distanceY = km / 110.574;
+
+  for (let i = 0; i <= points; i++) {
+    const theta = (i / points) * (2 * Math.PI);
+    const x = distanceX * Math.cos(theta);
+    const y = distanceY * Math.sin(theta);
+    coords.push([lng + x, lat + y]);
+  }
+
+  return {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [coords]
+    },
+    properties: {}
+  };
+}
+
 export class MapController {
   constructor(containerId) {
     this.containerId = containerId;
     this.map = null;
     this.boundarySourceId = 'city-boundary';
+    this.accuracySourceId = 'user-accuracy';
     this.userMarker = null;
     this.spotMarkers = [];
     this.routeSourceId = 'walk-route';
@@ -80,6 +104,33 @@ export class MapController {
           'line-width': 3,
           'line-opacity': 0.85,
           'line-dasharray': [3, 3]
+        }
+      });
+    }
+
+    // Accuracy circle source
+    if (!this.map.getSource(this.accuracySourceId)) {
+      this.map.addSource(this.accuracySourceId, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      this.map.addLayer({
+        id: 'accuracy-fill',
+        type: 'fill',
+        source: this.accuracySourceId,
+        paint: {
+          'fill-color': '#38bdf8',
+          'fill-opacity': 0.12
+        }
+      });
+      this.map.addLayer({
+        id: 'accuracy-line',
+        type: 'line',
+        source: this.accuracySourceId,
+        paint: {
+          'line-color': '#38bdf8',
+          'line-width': 1.5,
+          'line-opacity': 0.5
         }
       });
     }
@@ -163,7 +214,8 @@ export class MapController {
     }
   }
 
-  setUserLocation(lat, lng) {
+  setUserLocation(lat, lng, accuracy = 20) {
+    // Update Marker
     if (this.userMarker) {
       this.userMarker.setLngLat([lng, lat]);
     } else {
@@ -177,6 +229,13 @@ export class MapController {
       this.userMarker = new Marker({ element: el })
         .setLngLat([lng, lat])
         .addTo(this.map);
+    }
+
+    // Update Accuracy Circle
+    const accuracySrc = this.map.getSource(this.accuracySourceId);
+    if (accuracySrc) {
+      const circleGeoJSON = createGeoJSONCircle(lat, lng, accuracy);
+      accuracySrc.setData(circleGeoJSON);
     }
   }
 
@@ -262,7 +321,7 @@ export class MapController {
   recenterUser() {
     if (this.userMarker) {
       const lngLat = this.userMarker.getLngLat();
-      this.map.flyTo({ center: lngLat, zoom: 15, duration: 800 });
+      this.map.flyTo({ center: lngLat, zoom: 16, duration: 800 });
     }
   }
 }

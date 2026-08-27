@@ -51,12 +51,26 @@ async function runBrowserCheck() {
   console.log('📸 Screenshot 2: Main App Screen (Polish/Default)...');
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_2_unlocked_home.png') });
 
+  console.log('🛰️ Testing GPS Live Diagnostics Widget...');
+  await page.click('#btn-gps-status');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_gps_diagnostics.png') });
+  await page.click('#modal-gps-diag-close');
+  await page.waitForTimeout(400);
+
   console.log('🎲 Generating Today\'s 3 Walk Destinations...');
   await page.click('#btn-generate-daily');
   await page.waitForTimeout(1500);
 
   console.log('📸 Screenshot 3: Active Daily 3-Spot Tour with Route...');
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_3_active_walk.png') });
+
+  console.log('⚖️ Opening Legal, Privacy & Anthropology Mission Modal...');
+  await page.click('#btn-open-legal');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_legal_anthropology.png') });
+  await page.click('#modal-legal-close');
+  await page.waitForTimeout(400);
 
   console.log('🌐 Testing Language Switcher (Switching to Russian)...');
   await page.selectOption('#lang-select', 'ru');

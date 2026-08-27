@@ -32,12 +32,18 @@ export class CalendarModal {
     this.dayMemoriesContainer = document.getElementById('day-memories-container');
     this.dayMemoriesTitle = document.getElementById('day-memories-title');
     this.dayMemoriesList = document.getElementById('day-memories-list');
+    this.btnExportDay = document.getElementById('btn-export-day');
+    this.btnExportDayText = document.getElementById('btn-export-day-text');
 
     // Gallery Elements
     this.galleryGrid = document.getElementById('gallery-photos-grid');
+    this.btnExportAllGallery = document.getElementById('btn-export-all-gallery');
+    this.btnExportAllGalleryText = document.getElementById('btn-export-all-gallery-text');
 
     // Streak Elements
     this.streakStatsContent = document.getElementById('streak-stats-content');
+    this.btnExportAllStreak = document.getElementById('btn-export-all-streak');
+    this.btnExportAllStreakText = document.getElementById('btn-export-all-streak-text');
 
     // Lightbox Elements
     this.lightboxModal = document.getElementById('modal-lightbox');
@@ -74,6 +80,9 @@ export class CalendarModal {
     if (this.tabStreakText) this.tabStreakText.textContent = t('tabStreakText', l);
     if (this.btnDownloadText) this.btnDownloadText.textContent = t('downloadPhotoBtn', l);
     if (this.btnShareText) this.btnShareText.textContent = t('sharePhotoBtn', l);
+    if (this.btnExportDayText) this.btnExportDayText.textContent = t('exportDayBtn', l);
+    if (this.btnExportAllGalleryText) this.btnExportAllGalleryText.textContent = t('exportAllBtn', l);
+    if (this.btnExportAllStreakText) this.btnExportAllStreakText.textContent = t('exportAllBtn', l);
   }
 
   bindEvents() {
@@ -120,6 +129,17 @@ export class CalendarModal {
     }
     if (this.btnLightboxShare) {
       this.btnLightboxShare.addEventListener('click', () => this.handleSharePhoto());
+    }
+
+    // Export Buttons
+    if (this.btnExportDay) {
+      this.btnExportDay.addEventListener('click', () => this.handleExportDay());
+    }
+    if (this.btnExportAllGallery) {
+      this.btnExportAllGallery.addEventListener('click', () => this.handleExportAll());
+    }
+    if (this.btnExportAllStreak) {
+      this.btnExportAllStreak.addEventListener('click', () => this.handleExportAll());
     }
   }
 
@@ -233,9 +253,11 @@ export class CalendarModal {
           <p>${t('noMemoriesDay', this.currentLang)}</p>
         </div>
       `;
+      if (this.btnExportDay) this.btnExportDay.style.display = 'none';
       return;
     }
 
+    if (this.btnExportDay) this.btnExportDay.style.display = 'inline-flex';
     this.dayMemoriesList.innerHTML = '';
 
     photos.forEach((photo) => {
@@ -275,9 +297,11 @@ export class CalendarModal {
           <p style="margin-top: 8px;">${t('galleryEmpty', this.currentLang)}</p>
         </div>
       `;
+      if (this.btnExportAllGallery) this.btnExportAllGallery.style.display = 'none';
       return;
     }
 
+    if (this.btnExportAllGallery) this.btnExportAllGallery.style.display = 'inline-flex';
     this.galleryGrid.innerHTML = '';
 
     allPhotos.forEach((photo) => {
@@ -353,6 +377,7 @@ export class CalendarModal {
     this.lightboxMetaInfo.innerHTML = `
       <div>📅 <strong>${photo.date} • ${timeFormatted}</strong></div>
       <div>📍 ${photo.lat ? photo.lat.toFixed(5) : ''}, ${photo.lng ? photo.lng.toFixed(5) : ''} (${photo.cityName || '1.5 km Loop'})</div>
+      <div style="color: var(--pixel-blue); font-size: 0.72rem; margin-top: 2px;">🌐 mikhas-rahulia.github.io/dokad</div>
     `;
 
     this.lightboxDownload.href = photo.image;
@@ -375,8 +400,81 @@ export class CalendarModal {
     const photo = this.activeLightboxPhoto;
     await nativePlatform.shareContent({
       title: `Dokąd? Spot #${photo.step}`,
-      text: `Checked in at Spot #${photo.step} in Dokąd! 🔥`,
+      text: `Explored Spot #${photo.step} in Dokąd! 🔥 Check out: https://mikhas-rahulia.github.io/dokad/`,
       photoDataUrl: photo.image
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // DATA EXPORT (SINGLE DAY & FULL HISTORY)
+  // ═══════════════════════════════════════════════════════════════
+  async handleExportDay() {
+    const dateStr = this.selectedDateStr || this.streakService.getTodayDateString();
+    nativePlatform.playBlip();
+
+    const photos = await photoStorage.getPhotosByDate(dateStr);
+    const dailyState = this.streakService.getDailyState();
+
+    const exportPayload = {
+      app: 'Dokąd? — Physical Activity & Local Anthropology',
+      website: 'https://mikhas-rahulia.github.io/dokad/',
+      exportDate: new Date().toISOString(),
+      walkDate: dateStr,
+      dailyTour: dailyState && dailyState.date === dateStr ? dailyState : null,
+      totalPhotos: photos.length,
+      photos: photos.map(p => ({
+        id: p.id,
+        step: p.step,
+        timestamp: p.timestamp,
+        lat: p.lat,
+        lng: p.lng,
+        cityName: p.cityName,
+        image: p.image
+      }))
+    };
+
+    this.downloadJsonFile(exportPayload, `dokad_day_${dateStr}.json`);
+  }
+
+  async handleExportAll() {
+    nativePlatform.playBlip();
+
+    const allPhotos = await photoStorage.getAllPhotos();
+    const streakStats = this.streakService.getStreakStats();
+    const memoryDates = await photoStorage.getAllMemoryDates();
+
+    const exportPayload = {
+      app: 'Dokąd? — Physical Activity & Local Anthropology',
+      website: 'https://mikhas-rahulia.github.io/dokad/',
+      exportDate: new Date().toISOString(),
+      streakStats,
+      allRecordedDates: memoryDates,
+      totalPhotos: allPhotos.length,
+      photos: allPhotos.map(p => ({
+        id: p.id,
+        date: p.date,
+        step: p.step,
+        timestamp: p.timestamp,
+        lat: p.lat,
+        lng: p.lng,
+        cityName: p.cityName,
+        image: p.image
+      }))
+    };
+
+    this.downloadJsonFile(exportPayload, `dokad_full_archive_${this.streakService.getTodayDateString()}.json`);
+  }
+
+  downloadJsonFile(data, filename) {
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 }

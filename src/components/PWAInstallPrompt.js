@@ -1,8 +1,9 @@
 import { t } from '../i18n/translations.js';
 
-const PROMPT_SEEN_KEY = 'dokad_pwa_one_time_prompt_v2';
+const LAST_PROMPT_KEY = 'dokad_pwa_last_prompt_timestamp_v1';
 const SHOW_DELAY_MS = 10000; // Trigger after 10 seconds of usage
-const CLOSE_UNLOCK_SECONDS = 10; // Closable strictly after 10 seconds (User requirement)
+const CLOSE_UNLOCK_SECONDS = 10; // Closable strictly after 10 seconds
+const PROMPT_INTERVAL_MS = 5 * 24 * 60 * 60 * 1000; // Rare periodic popup: at most once every 5 days
 
 export class PWAInstallPrompt {
   constructor() {
@@ -37,6 +38,8 @@ export class PWAInstallPrompt {
   isStandalone() {
     return (
       window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches ||
       window.navigator.standalone === true ||
       document.referrer.includes('android-app://')
     );
@@ -47,17 +50,27 @@ export class PWAInstallPrompt {
     return /iphone|ipad|ipod/.test(ua);
   }
 
-  hasAlreadySeenPrompt() {
-    return localStorage.getItem(PROMPT_SEEN_KEY) === 'true';
+  shouldShowPeriodicPrompt() {
+    // 1. NEVER show if running as installed PWA standalone app
+    if (this.isStandalone()) {
+      return false;
+    }
+
+    // 2. Rare periodic interval: only show if at least 5 days have passed since last shown
+    const lastPrompt = localStorage.getItem(LAST_PROMPT_KEY);
+    if (!lastPrompt) return true;
+
+    const elapsed = Date.now() - parseInt(lastPrompt, 10);
+    return elapsed >= PROMPT_INTERVAL_MS;
   }
 
-  markAsSeen() {
-    localStorage.setItem(PROMPT_SEEN_KEY, 'true');
+  markPromptShown() {
+    localStorage.setItem(LAST_PROMPT_KEY, Date.now().toString());
   }
 
   init() {
-    // If running inside installed PWA or already seen prompt, do not show
-    if (this.isStandalone() || this.hasAlreadySeenPrompt()) {
+    // If running inside installed PWA, abort immediately
+    if (this.isStandalone()) {
       return;
     }
 
@@ -70,16 +83,18 @@ export class PWAInstallPrompt {
       this.deferredPrompt = e;
     });
 
-    // Schedule 1-time prompt to show strictly after 10 seconds of usage
-    this.timerId = setTimeout(() => {
-      if (!this.isStandalone() && !this.hasAlreadySeenPrompt()) {
-        this.showBanner();
-      }
-    }, SHOW_DELAY_MS);
+    // Schedule prompt to show rarely after 10 seconds of active usage
+    if (this.shouldShowPeriodicPrompt()) {
+      this.timerId = setTimeout(() => {
+        if (!this.isStandalone() && this.shouldShowPeriodicPrompt()) {
+          this.showBanner();
+        }
+      }, SHOW_DELAY_MS);
+    }
 
     window.addEventListener('appinstalled', () => {
       this.hideBanner();
-      this.markAsSeen();
+      this.markPromptShown();
       this.deferredPrompt = null;
       console.log('🎉 Dokąd PWA installed!');
     });
@@ -119,11 +134,11 @@ export class PWAInstallPrompt {
 
   showBanner() {
     if (!this.banner) return;
+    this.markPromptShown();
 
     this.banner.style.display = 'flex';
     setTimeout(() => this.banner.classList.add('visible'), 50);
 
-    // 3-second countdown before close button becomes active
     this.startCloseCountdown();
   }
 
@@ -165,10 +180,9 @@ export class PWAInstallPrompt {
   }
 
   async handleInstallClick() {
-    this.markAsSeen();
+    this.markPromptShown();
 
     if (this.deferredPrompt) {
-      // Chromium / Android Chrome / Edge
       this.deferredPrompt.prompt();
       const { outcome } = await this.deferredPrompt.userChoice;
       if (outcome === 'accepted') {
@@ -176,13 +190,11 @@ export class PWAInstallPrompt {
       }
       this.deferredPrompt = null;
     } else if (this.isIos()) {
-      // iOS Safari Add to Home Screen Modal
       if (this.iosModal) {
         this.iosModal.classList.add('active');
       }
       this.hideBanner();
     } else {
-      // Other browsers
       if (this.iosModal) {
         this.iosModal.classList.add('active');
       }
@@ -191,7 +203,7 @@ export class PWAInstallPrompt {
   }
 
   dismiss() {
-    this.markAsSeen();
+    this.markPromptShown();
     this.hideBanner();
   }
 }

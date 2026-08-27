@@ -2,6 +2,7 @@ import { StreakService } from '../geo/streakService.js';
 import { PasskeyAuth } from './PasskeyAuth.js';
 import { CameraModal } from './CameraModal.js';
 import { CalendarModal } from './CalendarModal.js';
+import { LegalModal } from './LegalModal.js';
 import { t } from '../i18n/translations.js';
 import { nativePlatform } from '../utils/nativePlatform.js';
 import {
@@ -18,6 +19,8 @@ export class AppUI {
 
     this.currentLang = this.detectLanguage();
     this.userLocation = null;
+    this.userAccuracy = null;
+    this.lastGpsTimestamp = null;
     this.dailyState = null;
     this.watchId = null;
 
@@ -48,11 +51,27 @@ export class AppUI {
     this.brandTitleEl = document.getElementById('brand-title');
     this.radiusTagEl = document.getElementById('radius-tag');
     this.navMemoriesText = document.getElementById('nav-memories-text');
+    this.navLegalText = document.getElementById('nav-legal-text');
     this.streakCountEl = document.getElementById('streak-count');
     this.headerStreakBadge = document.getElementById('header-streak-badge');
     this.btnLocateMe = document.getElementById('btn-locate-me');
     this.btnOpenCalendar = document.getElementById('btn-open-calendar');
+    this.btnOpenLegal = document.getElementById('btn-open-legal');
     this.langSelect = document.getElementById('lang-select');
+    this.btnGpsStatus = document.getElementById('btn-gps-status');
+    this.gpsStatusHeaderText = document.getElementById('gps-status-header-text');
+
+    // GPS Diagnostics Modal
+    this.gpsDiagModal = document.getElementById('modal-gps-diag');
+    this.gpsDiagModalClose = document.getElementById('modal-gps-diag-close');
+    this.gpsDiagModalTitle = document.getElementById('gps-diag-modal-title');
+    this.gpsDiagStatus = document.getElementById('gps-diag-status');
+    this.gpsDiagCoords = document.getElementById('gps-diag-coords');
+    this.gpsDiagAccuracy = document.getElementById('gps-diag-accuracy');
+    this.gpsDiagTime = document.getElementById('gps-diag-time');
+    this.gpsDiagSpotsList = document.getElementById('gps-diag-spots-list');
+    this.btnGpsForceTest = document.getElementById('btn-gps-force-test');
+    this.btnGpsTestText = document.getElementById('btn-gps-test-text');
 
     // Cards
     this.initialCard = document.getElementById('initial-card');
@@ -77,6 +96,7 @@ export class AppUI {
   initComponents() {
     this.cameraModal = new CameraModal(this.currentLang);
     this.calendarModal = new CalendarModal(this.streakService, this.currentLang);
+    this.legalModal = new LegalModal(this.currentLang);
     this.passkeyAuth = new PasskeyAuth(() => {
       nativePlatform.playCoin();
       this.showToast(t('toastUnlocked', this.currentLang));
@@ -96,17 +116,53 @@ export class AppUI {
       });
     }
 
-    // Locate GPS
+    // Locate GPS button in header
     this.btnLocateMe.addEventListener('click', () => {
       nativePlatform.playBlip();
       this.centerOnUser();
     });
+
+    // Open GPS Diagnostics Modal
+    if (this.btnGpsStatus) {
+      this.btnGpsStatus.addEventListener('click', () => {
+        nativePlatform.playBlip();
+        this.openGpsDiagnostics();
+      });
+    }
+
+    if (this.gpsDiagModalClose) {
+      this.gpsDiagModalClose.addEventListener('click', () => {
+        nativePlatform.playBlip();
+        this.closeGpsDiagnostics();
+      });
+    }
+
+    if (this.gpsDiagModal) {
+      this.gpsDiagModal.addEventListener('click', (e) => {
+        if (e.target === this.gpsDiagModal) {
+          nativePlatform.playBlip();
+          this.closeGpsDiagnostics();
+        }
+      });
+    }
+
+    if (this.btnGpsForceTest) {
+      this.btnGpsForceTest.addEventListener('click', () => this.forceGpsReacquire());
+    }
 
     // Open Calendar & Gallery Memories
     this.btnOpenCalendar.addEventListener('click', () => {
       nativePlatform.playBlip();
       this.calendarModal.open('calendar');
     });
+
+    // Open Legal, Privacy & Anthropology Mission Modal
+    if (this.btnOpenLegal) {
+      this.btnOpenLegal.addEventListener('click', () => {
+        nativePlatform.playBlip();
+        this.legalModal.open('mission');
+      });
+    }
 
     // Open Streak Stats from Header Badge
     if (this.headerStreakBadge) {
@@ -134,6 +190,7 @@ export class AppUI {
     this.passkeyAuth.updateLanguage(lang);
     this.cameraModal.updateLanguage(lang);
     this.calendarModal.updateLanguage(lang);
+    this.legalModal.updateLanguage(lang);
     if (this.pwaPrompt) {
       this.pwaPrompt.updateLanguage(lang);
     }
@@ -144,6 +201,8 @@ export class AppUI {
     if (this.brandTitleEl) this.brandTitleEl.textContent = t('appTitle', lang);
     if (this.radiusTagEl) this.radiusTagEl.textContent = t('radiusTag', lang);
     if (this.navMemoriesText) this.navMemoriesText.textContent = t('memoriesNav', lang);
+    if (this.navLegalText) this.navLegalText.textContent = t('infoLegalNav', lang);
+    if (this.btnGpsTestText) this.btnGpsTestText.textContent = t('gpsVerifyBtn', lang);
 
     // Initial Card
     if (this.initialTitleEl) this.initialTitleEl.textContent = t('initialTitle', lang);
@@ -169,6 +228,7 @@ export class AppUI {
   initGeolocation() {
     if (!navigator.geolocation) {
       this.showToast(t('toastGpsReq', this.currentLang));
+      if (this.gpsDiagStatus) this.gpsDiagStatus.textContent = '❌ GPS NOT SUPPORTED';
       return;
     }
 
@@ -177,12 +237,31 @@ export class AppUI {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude
       };
-      this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng);
+      this.userAccuracy = pos.coords.accuracy || 20;
+      this.lastGpsTimestamp = new Date();
+
+      // Update map marker and accuracy circle
+      this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, this.userAccuracy);
       this.updateSpotsLiveDistances();
+
+      // Update Header GPS Status Pill
+      if (this.gpsStatusHeaderText) {
+        this.gpsStatusHeaderText.textContent = `GPS ±${Math.round(this.userAccuracy)}m`;
+      }
+
+      // Update Diagnostics modal if open
+      this.renderGpsDiagnosticsContent();
     };
 
     const onErr = (err) => {
       console.warn('GPS error:', err.message);
+      if (this.gpsStatusHeaderText) {
+        this.gpsStatusHeaderText.textContent = 'GPS ⚠️';
+      }
+      if (this.gpsDiagStatus) {
+        this.gpsDiagStatus.textContent = `⚠️ ${err.message}`;
+        this.gpsDiagStatus.className = 'gps-diag-val error';
+      }
     };
 
     // Phase 1: Instant coarse position from Wi-Fi/Cell cache (~50ms)
@@ -192,12 +271,12 @@ export class AppUI {
       maximumAge: 60000
     });
 
-    // Phase 2: High-accuracy GNSS tracking
+    // Phase 2: High-accuracy GNSS continuous tracking
     const startPrecisionWatch = () => {
       if (this.watchId !== null) return;
       this.watchId = navigator.geolocation.watchPosition(onPos, onErr, {
         enableHighAccuracy: true,
-        maximumAge: 3000,
+        maximumAge: 2000,
         timeout: 10000
       });
     };
@@ -221,22 +300,100 @@ export class AppUI {
     });
   }
 
+  openGpsDiagnostics() {
+    this.renderGpsDiagnosticsContent();
+    if (this.gpsDiagModal) {
+      this.gpsDiagModal.classList.add('active');
+    }
+  }
+
+  closeGpsDiagnostics() {
+    if (this.gpsDiagModal) {
+      this.gpsDiagModal.classList.remove('active');
+    }
+  }
+
+  renderGpsDiagnosticsContent() {
+    if (!this.gpsDiagModal || !this.gpsDiagModal.classList.contains('active')) return;
+
+    if (this.userLocation) {
+      if (this.gpsDiagCoords) {
+        this.gpsDiagCoords.textContent = `${this.userLocation.lat.toFixed(5)}° N, ${this.userLocation.lng.toFixed(5)}° E`;
+      }
+      if (this.gpsDiagAccuracy) {
+        this.gpsDiagAccuracy.textContent = `±${Math.round(this.userAccuracy || 10)} meters`;
+      }
+      if (this.gpsDiagTime && this.lastGpsTimestamp) {
+        this.gpsDiagTime.textContent = this.lastGpsTimestamp.toLocaleTimeString();
+      }
+      if (this.gpsDiagStatus) {
+        this.gpsDiagStatus.textContent = '🟢 ACTIVE & STREAMING (GNSS)';
+        this.gpsDiagStatus.className = 'gps-diag-val live';
+      }
+    } else {
+      if (this.gpsDiagCoords) this.gpsDiagCoords.textContent = 'Locating...';
+      if (this.gpsDiagAccuracy) this.gpsDiagAccuracy.textContent = '--';
+      if (this.gpsDiagTime) this.gpsDiagTime.textContent = '--';
+    }
+
+    // Render distances to spots in diagnostics
+    if (this.gpsDiagSpotsList) {
+      if (this.dailyState && this.dailyState.spots && this.dailyState.spots.length > 0 && this.userLocation) {
+        this.gpsDiagSpotsList.innerHTML = '';
+        this.dailyState.spots.forEach((spot, idx) => {
+          const prox = checkProximity(this.userLocation.lat, this.userLocation.lng, spot.lat, spot.lng, 21);
+          const row = document.createElement('div');
+          row.className = `gps-spot-diag-item ${spot.checkedIn ? 'done' : prox.inRange ? 'in-range' : ''}`;
+          row.innerHTML = `
+            <span>#${spot.step || idx + 1} (${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)})</span>
+            <strong>${spot.checkedIn ? '✔ VERIFIED' : `${prox.distanceMeters} m (${prox.inRange ? '🎯 IN RANGE' : '🚶 AWAY'})`}</strong>
+          `;
+          this.gpsDiagSpotsList.appendChild(row);
+        });
+      } else {
+        this.gpsDiagSpotsList.innerHTML = '<div class="no-spots-diag">No active tour spots generated yet. Click "Start Today\'s 3-Spot Walk".</div>';
+      }
+    }
+  }
+
+  forceGpsReacquire() {
+    nativePlatform.playBlip();
+    this.showToast(t('toastGpsWait', this.currentLang));
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        this.userLocation = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+        this.userAccuracy = pos.coords.accuracy || 15;
+        this.lastGpsTimestamp = new Date();
+
+        this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng, this.userAccuracy);
+        this.map.recenterUser();
+        this.updateSpotsLiveDistances();
+
+        if (this.gpsStatusHeaderText) {
+          this.gpsStatusHeaderText.textContent = `GPS ±${Math.round(this.userAccuracy)}m`;
+        }
+
+        this.renderGpsDiagnosticsContent();
+        nativePlatform.playCoin();
+        this.showToast(`🛰️ GPS: ${this.userLocation.lat.toFixed(4)}, ${this.userLocation.lng.toFixed(4)} (±${Math.round(this.userAccuracy)}m)`);
+      },
+      (err) => {
+        nativePlatform.playError();
+        this.showToast(`⚠️ GPS: ${err.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
   centerOnUser() {
     if (this.userLocation) {
       this.map.recenterUser();
     } else {
-      this.showToast(t('toastGpsWait', this.currentLang));
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          this.userLocation = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude
-          };
-          this.map.setUserLocation(this.userLocation.lat, this.userLocation.lng);
-          this.map.recenterUser();
-        },
-        () => this.showToast(t('toastGpsReq', this.currentLang))
-      );
+      this.forceGpsReacquire();
     }
   }
 
@@ -406,10 +563,6 @@ export class AppUI {
     });
   }
 
-  /**
-   * Prompts BeReal-style photo verification when user arrives within 21m.
-   * @param {number} spotIndex
-   */
   promptPhotoVerification(spotIndex) {
     if (!this.userLocation) {
       nativePlatform.playError();
@@ -469,9 +622,6 @@ export class AppUI {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // WAAPI CONFETTI — Zero dependencies, compositor-thread animation
-  // ═══════════════════════════════════════════════════════════════
   triggerConfetti(isGrand = false) {
     const count = isGrand ? 40 : 16;
     const colors = ['#facc15', '#22c55e', '#0ea5e9', '#ef4444', '#a855f7', '#fb923c'];
