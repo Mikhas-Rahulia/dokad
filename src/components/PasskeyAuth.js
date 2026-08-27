@@ -1,7 +1,7 @@
 /**
  * Cross-Platform Passkey & Universal Portable Access Key Authentication.
- * Works seamlessly with 1Password, Bitwarden, Apple Keychain, Google Password Manager,
- * Windows Hello, Touch ID, Face ID, and Native Android App.
+ * Supports WebAuthn Conditional UI (Autofill on another device from 1Password, Bitwarden,
+ * Apple iCloud Keychain, Google Password Manager, Windows Hello, and Android Credential Manager).
  */
 import { t } from '../i18n/translations.js';
 
@@ -13,6 +13,7 @@ export class PasskeyAuth {
     this.onUnlocked = onUnlockedCallback;
     this.currentLang = lang;
     this.isUnlocked = false;
+    this.abortController = null;
 
     this.overlay = document.getElementById('passkey-lock-overlay');
     this.mainPrompt = document.getElementById('passkey-main-prompt');
@@ -86,13 +87,20 @@ export class PasskeyAuth {
     }
     if (this.inputAccessKey) {
       this.inputAccessKey.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') this.verifyManualAccessKey();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.verifyManualAccessKey();
+        }
+      });
+      // When focusing input, make sure WebAuthn autofill triggers
+      this.inputAccessKey.addEventListener('focus', () => {
+        this.startConditionalAutofill();
       });
     }
   }
 
   isPasskeySupported() {
-    return window.PublicKeyCredential !== undefined;
+    return typeof window !== 'undefined' && window.PublicKeyCredential !== undefined;
   }
 
   getSavedCredentialId() {
@@ -120,7 +128,7 @@ export class PasskeyAuth {
     return result;
   }
 
-  checkInitialState() {
+  async checkInitialState() {
     const accessKey = this.getUniversalAccessKey();
 
     if (this.activeKeyDisplay) {
@@ -129,10 +137,8 @@ export class PasskeyAuth {
 
     if (this.isPasskeySupported()) {
       this.showMainPasskeyView();
-      // Auto-trigger passkey check if previously authenticated
-      if (this.getSavedCredentialId()) {
-        setTimeout(() => this.authenticatePasskey(true), 300);
-      }
+      // Start WebAuthn Conditional UI (Autofill on another device)
+      this.startConditionalAutofill();
     } else {
       this.showKeyInputView();
     }
@@ -154,6 +160,7 @@ export class PasskeyAuth {
     if (this.inputAccessKey) {
       this.inputAccessKey.focus();
     }
+    this.startConditionalAutofill();
   }
 
   verifyManualAccessKey() {
@@ -169,15 +176,15 @@ export class PasskeyAuth {
     if (inputVal === currentKey) {
       this.statusMsg.textContent = t('toastKeyVerified', this.currentLang);
       this.statusMsg.style.color = 'var(--pixel-green)';
-      setTimeout(() => this.unlockApp(), 400);
+      setTimeout(() => this.unlockApp(), 300);
     } else if (/^DOKAD-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(inputVal)) {
-      // Valid format from another device — save it as the new local key
+      // Valid portable key from another device — save it locally
       localStorage.setItem(STORAGE_KEY_ACCESS_KEY, inputVal);
       if (this.activeKeyDisplay) this.activeKeyDisplay.textContent = inputVal;
 
       this.statusMsg.textContent = t('toastKeyVerified', this.currentLang);
       this.statusMsg.style.color = 'var(--pixel-green)';
-      setTimeout(() => this.unlockApp(), 400);
+      setTimeout(() => this.unlockApp(), 300);
     } else {
       this.statusMsg.textContent = t('toastKeyInvalid', this.currentLang);
       this.statusMsg.style.color = 'var(--pixel-red)';
@@ -196,10 +203,74 @@ export class PasskeyAuth {
     }
   }
 
+  getEffectiveRpId() {
+    const hostname = window.location.hostname;
+    if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1') {
+      return undefined; // default to current origin
+    }
+    return hostname;
+  }
+
+  /**
+   * Starts WebAuthn Conditional Mediation (Autofill UI).
+   * Allows password managers (1Password, Bitwarden, Apple Keychain, Google PM) to offer
+   * passkeys created on ANY device directly inside the autofill dropdown.
+   */
+  async startConditionalAutofill() {
+    if (!this.isPasskeySupported()) return;
+
+    try {
+      if (PublicKeyCredential.isConditionalMediationAvailable) {
+        const isAvailable = await PublicKeyCredential.isConditionalMediationAvailable();
+        if (!isAvailable) return;
+
+        if (this.abortController) {
+          this.abortController.abort();
+        }
+        this.abortController = new AbortController();
+
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+
+        const rpId = this.getEffectiveRpId();
+
+        const getOptions = {
+          publicKey: {
+            challenge: challenge.buffer,
+            rpId: rpId,
+            timeout: 120000,
+            userVerification: 'preferred',
+            allowCredentials: [] // Empty allows password manager to present all discoverable credentials
+          },
+          mediation: 'conditional',
+          signal: this.abortController.signal
+        };
+
+        const assertion = await navigator.credentials.get(getOptions);
+        if (assertion) {
+          const rawId = arrayBufferToBase64(assertion.rawId);
+          localStorage.setItem(STORAGE_KEY_PASSKEY, rawId);
+
+          this.statusMsg.textContent = '✅ ' + t('toastUnlocked', this.currentLang);
+          this.statusMsg.style.color = 'var(--pixel-green)';
+          setTimeout(() => this.unlockApp(), 300);
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.debug('Conditional autofill status:', err.message);
+      }
+    }
+  }
+
   async registerPasskey() {
     if (!this.isPasskeySupported()) {
       this.showKeyInputView();
       return;
+    }
+
+    if (this.abortController) {
+      this.abortController.abort();
     }
 
     try {
@@ -210,8 +281,7 @@ export class PasskeyAuth {
       const userId = new Uint8Array(16);
       window.crypto.getRandomValues(userId);
 
-      const hostname = window.location.hostname || 'localhost';
-      const rpId = hostname.includes('github.io') || hostname === 'localhost' ? hostname : undefined;
+      const rpId = this.getEffectiveRpId();
 
       const createOptions = {
         publicKey: {
@@ -246,7 +316,7 @@ export class PasskeyAuth {
         localStorage.setItem(STORAGE_KEY_PASSKEY, rawId);
         this.statusMsg.textContent = '✅ ' + t('passkeyStatusUnlock', this.currentLang);
         this.statusMsg.style.color = 'var(--pixel-green)';
-        setTimeout(() => this.unlockApp(), 600);
+        setTimeout(() => this.unlockApp(), 500);
       }
     } catch (err) {
       console.warn('Passkey registration error:', err);
@@ -256,14 +326,17 @@ export class PasskeyAuth {
   }
 
   /**
-   * Authenticates using WebAuthn.
-   * Works on ANY device via password managers (1Password, Bitwarden, iCloud Keychain, Google Password Manager)
-   * using Discoverable Resident Credentials (allowCredentials: []).
+   * Explicit modal Passkey authentication.
+   * Prompts the password manager (1Password, Bitwarden, Google, Apple) with discoverable credentials.
    */
-  async authenticatePasskey(isAuto = false) {
+  async authenticatePasskey() {
     if (!this.isPasskeySupported()) {
-      if (!isAuto) this.showKeyInputView();
+      this.showKeyInputView();
       return;
+    }
+
+    if (this.abortController) {
+      this.abortController.abort();
     }
 
     try {
@@ -272,8 +345,7 @@ export class PasskeyAuth {
       window.crypto.getRandomValues(challenge);
 
       const credIdBase64 = this.getSavedCredentialId();
-      const hostname = window.location.hostname || 'localhost';
-      const rpId = hostname.includes('github.io') || hostname === 'localhost' ? hostname : undefined;
+      const rpId = this.getEffectiveRpId();
 
       const getOptions = {
         publicKey: {
@@ -281,35 +353,38 @@ export class PasskeyAuth {
           rpId: rpId,
           timeout: 60000,
           userVerification: 'preferred',
-          // If we have a local ID, include it; otherwise empty array lets Password Manager present discoverable passkeys!
+          // Pass empty allowCredentials if not known on this device so password manager can search synced passkeys
           allowCredentials: credIdBase64
             ? [{ type: 'public-key', id: base64ToArrayBuffer(credIdBase64) }]
             : []
-        }
+        },
+        mediation: 'optional'
       };
 
       const assertion = await navigator.credentials.get(getOptions);
 
       if (assertion) {
-        // Save credential ID on this device so future unlocks are fast
         const rawId = arrayBufferToBase64(assertion.rawId);
         localStorage.setItem(STORAGE_KEY_PASSKEY, rawId);
 
         this.statusMsg.textContent = '✅ ' + t('toastUnlocked', this.currentLang);
         this.statusMsg.style.color = 'var(--pixel-green)';
-        setTimeout(() => this.unlockApp(), 400);
+        setTimeout(() => this.unlockApp(), 300);
       }
     } catch (err) {
       console.warn('Passkey authentication error:', err);
-      if (!isAuto) {
-        this.statusMsg.textContent = '⚠️ ' + (err.message || 'Passkey not found in password manager');
-        this.statusMsg.style.color = 'var(--pixel-yellow)';
-      }
+      this.statusMsg.textContent = '⚠️ ' + (err.message || 'Passkey not selected');
+      this.statusMsg.style.color = 'var(--pixel-yellow)';
+      // Restart conditional autofill in background
+      this.startConditionalAutofill();
     }
   }
 
   unlockApp() {
     this.isUnlocked = true;
+    if (this.abortController) {
+      this.abortController.abort();
+    }
     this.overlay.classList.remove('active');
     if (this.onUnlocked) {
       this.onUnlocked();
