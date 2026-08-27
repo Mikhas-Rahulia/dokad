@@ -1,5 +1,6 @@
 import {
   generate3SpotsInCity,
+  generateRandomSpotsInSquare,
   generateRandomSpotsInRadius,
   solveOptimalRoute,
   checkProximity
@@ -127,7 +128,7 @@ export class StreakService {
     if (city && city.geojson) {
       rawSpots = generate3SpotsInCity(city.geojson, 3);
     } else {
-      rawSpots = generateRandomSpotsInRadius(origin.lat, origin.lng, 2.0, 3, 150);
+      rawSpots = generateRandomSpotsInSquare(origin.lat, origin.lng, 1.5, 3, 150);
     }
 
     const { orderedSpots, totalDistanceKm, legs } = solveOptimalRoute(origin, rawSpots);
@@ -142,8 +143,8 @@ export class StreakService {
 
     const dailyState = {
       date: this.getTodayDateString(),
-      cityId: city ? city.id : 'local_2km',
-      cityName: city ? (city.nativeName || city.name) : 'Nearby 2 km',
+      cityId: city ? city.id : 'local_1.5km',
+      cityName: city ? (city.nativeName || city.name) : 'Nearby 1.5 km',
       origin: { lat: origin.lat, lng: origin.lng },
       spots: spotsWithStatus,
       totalDistanceKm,

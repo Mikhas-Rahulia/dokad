@@ -71,7 +71,7 @@
       <div class="brand-badge">
         <span class="brand-icon">🕹️</span>
         <span id="brand-title" class="brand-title">Dokąd?</span>
-        <span id="radius-tag" class="radius-tag">2 KM</span>
+        <span id="radius-tag" class="radius-tag">1.5 KM</span>
       </div>
 
       <div class="header-right-group">
@@ -84,14 +84,14 @@
           <option value="en">EN</option>
         </select>
 
-        <button id="btn-open-calendar" class="pixel-btn pixel-btn-nav" title="Memories Calendar">
+        <button id="btn-open-calendar" class="pixel-btn pixel-btn-nav" title="Memories & Photo Gallery">
           <span>📅</span> <span id="nav-memories-text" class="nav-btn-text">MEMORIES</span>
         </button>
 
-        <div id="header-streak-badge" class="pixel-badge streak-badge" title="Daily Streak">
+        <button id="header-streak-badge" class="pixel-badge streak-badge" title="Daily Streak & Stats" aria-label="Daily Streak">
           <span class="fire-icon">🔥</span>
           <span id="streak-count">0</span>
-        </div>
+        </button>
 
         <button id="btn-locate-me" class="pixel-icon-btn" title="Locate GPS" aria-label="Locate GPS">
           <span>📍</span>
@@ -239,33 +239,82 @@
       </div>
     </div>
 
-    <!-- BeReal-Style Memories Calendar Modal -->
+    <!-- Comprehensive Memories Modal (Calendar, Photo Gallery, Streak Stats) -->
     <div id="modal-calendar" class="modal-overlay">
       <div class="modal-card pixel-modal calendar-modal-card">
-        <div class="modal-header">
-          <div class="calendar-header-nav">
-            <button id="btn-calendar-prev" class="pixel-btn pixel-btn-sm">◀</button>
-            <h3 id="calendar-month-title" class="modal-title">AUGUST 2026</h3>
-            <button id="btn-calendar-next" class="pixel-btn pixel-btn-sm">▶</button>
-          </div>
+        
+        <!-- Modal Tabs Navigation -->
+        <div class="modal-tabs-header">
+          <button id="tab-btn-calendar" class="pixel-tab-btn active">
+            <span id="tab-calendar-text">📅 CALENDAR</span>
+          </button>
+          <button id="tab-btn-gallery" class="pixel-tab-btn">
+            <span id="tab-gallery-text">🖼️ GALLERY</span>
+          </button>
+          <button id="tab-btn-streak" class="pixel-tab-btn">
+            <span id="tab-streak-text">🔥 STREAK</span>
+          </button>
           <button id="modal-calendar-close" class="pixel-close-btn" aria-label="Close">✕</button>
         </div>
 
         <div class="modal-body calendar-modal-body">
-          <div class="calendar-weekdays">
-            <span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span><span>SU</span>
-          </div>
-          <div id="calendar-grid-days" class="calendar-grid-days">
-            <!-- Dynamically populated -->
-          </div>
+          
+          <!-- TAB 1: CALENDAR VIEW -->
+          <div id="view-tab-calendar" class="tab-view active">
+            <div class="calendar-header-nav">
+              <button id="btn-calendar-prev" class="pixel-btn pixel-btn-sm">◀</button>
+              <h3 id="calendar-month-title" class="modal-title">AUGUST 2026</h3>
+              <button id="btn-calendar-next" class="pixel-btn pixel-btn-sm">▶</button>
+            </div>
+            <div class="calendar-weekdays">
+              <span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span><span>SU</span>
+            </div>
+            <div id="calendar-grid-days" class="calendar-grid-days">
+              <!-- Dynamically populated -->
+            </div>
 
-          <!-- Day Photo Memories Section -->
-          <div id="day-memories-container" class="day-memories-container">
-            <h4 id="day-memories-title" class="day-memories-title">📅 MEMORIES</h4>
-            <div id="day-memories-list" class="day-memories-list">
-              <!-- Dynamically populated photo cards -->
+            <!-- Day Photo Memories Section -->
+            <div id="day-memories-container" class="day-memories-container">
+              <h4 id="day-memories-title" class="day-memories-title">📅 MEMORIES</h4>
+              <div id="day-memories-list" class="day-memories-list">
+                <!-- Dynamically populated photo cards -->
+              </div>
             </div>
           </div>
+
+          <!-- TAB 2: PHOTO GALLERY (ALL PHOTOS GRID) -->
+          <div id="view-tab-gallery" class="tab-view" style="display: none;">
+            <div id="gallery-photos-grid" class="gallery-photos-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- TAB 3: STREAK STATISTICS -->
+          <div id="view-tab-streak" class="tab-view" style="display: none;">
+            <div id="streak-stats-content" class="streak-stats-content">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Full-Screen Photo Lightbox Modal -->
+    <div id="modal-lightbox" class="modal-overlay lightbox-overlay">
+      <div class="lightbox-card pixel-card">
+        <div class="lightbox-header">
+          <span id="lightbox-title" class="lightbox-title">📸 SPOT PHOTO</span>
+          <button id="modal-lightbox-close" class="pixel-close-btn" aria-label="Close">✕</button>
+        </div>
+        <div class="lightbox-image-wrapper">
+          <img id="lightbox-img" alt="Enlarged verification photo" />
+        </div>
+        <div class="lightbox-meta">
+          <div id="lightbox-meta-info" class="lightbox-meta-info"></div>
+          <a id="btn-lightbox-download" class="pixel-btn pixel-btn-roll" download="dokad_photo.jpg">
+            <span>💾</span> <span id="btn-download-text">DOWNLOAD PHOTO</span>
+          </a>
         </div>
       </div>
     </div>

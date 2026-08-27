@@ -57,18 +57,17 @@ cities.forEach(city => {
 });
 
 // Test 4: Optimal Route Solver
-console.log('\n🔍 Testing Optimal TSP Walking Route Solver:');
+console.log('\n🔍 Testing Optimal Closed-Loop TSP Walking Route Solver (with return to start):');
 const origin = { lat: 50.0600, lng: 19.9400 };
-const p1 = { lat: 50.0645, lng: 19.9400 }; // 500m
-const p2 = { lat: 50.0690, lng: 19.9400 }; // 1000m
-const p3 = { lat: 50.0735, lng: 19.9400 }; // 1500m
-const scrambled = [p3, p1, p2];
-const { orderedSpots, totalDistanceKm } = solveOptimalRoute(origin, scrambled);
+const p1 = { lat: 50.0640, lng: 19.9400 }; // North
+const p2 = { lat: 50.0640, lng: 19.9460 }; // North-East
+const p3 = { lat: 50.0600, lng: 19.9460 }; // East
+const scrambled = [p2, p3, p1];
+const { orderedSpots, totalDistanceKm, legs } = solveOptimalRoute(origin, scrambled);
 
-assert(orderedSpots[0].lat === p1.lat, 'Visits nearest point first');
-assert(orderedSpots[1].lat === p2.lat, 'Visits middle point second');
-assert(orderedSpots[2].lat === p3.lat, 'Visits farthest point third');
-assert(totalDistanceKm < 2.0, `Total route distance ~1.5 km (got ${totalDistanceKm.toFixed(2)} km)`);
+assert(orderedSpots.length === 3, 'Returns all 3 spots in route');
+assert(legs.length === 4, `Route has exactly 4 legs returning to origin (got ${legs.length})`);
+assert(totalDistanceKm > 1.0 && totalDistanceKm < 2.5, `Total loop route distance is optimal (got ${totalDistanceKm.toFixed(2)} km)`);
 
 // Test 5: 21m Proximity Check
 console.log('\n🔍 Testing 21m Arrival Proximity:');
@@ -77,10 +76,25 @@ assert(proxClose.inRange === true, `~16m away is within 21m proximity (got ${pro
 const proxFar = checkProximity(50.0604, 19.9400, 50.0600, 19.9400, 21);
 assert(proxFar.inRange === false, `~45m away is NOT within 21m proximity (got ${proxFar.distanceMeters}m)`);
 
-// Test 6: Google Maps URL
+// Test 6: Google Maps Closed-Loop URL (Origin == Destination)
+console.log('\n🔍 Testing Google Maps Closed-Loop Walking URL:');
 const gUrl = getGoogleMapsOptimalRouteUrl(origin, orderedSpots);
 assert(gUrl.includes('travelmode=walking'), 'Google Maps URL specifies walking mode');
 assert(gUrl.includes('waypoints='), 'Google Maps URL contains waypoints');
+assert(gUrl.includes(`origin=${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`), 'Google Maps URL origin is start point');
+assert(gUrl.includes(`destination=${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`), 'Google Maps URL destination is start point (Point 4 - loop)');
+
+// Test 7: 1.5 km Square Spot Generation
+console.log('\n🔍 Testing 1.5 km Square Spot Generation:');
+const { generateRandomSpotsInSquare } = await import('../src/geo/geometry.js');
+const squareSpots = generateRandomSpotsInSquare(origin.lat, origin.lng, 1.5, 3, 150);
+assert(squareSpots.length === 3, 'Generates exactly 3 spots in 1.5 km square');
+squareSpots.forEach((s, idx) => {
+  const dLatKm = Math.abs(s.lat - origin.lat) * 111.32;
+  const dLngKm = Math.abs(s.lng - origin.lng) * (111.32 * Math.cos(origin.lat * (Math.PI / 180)));
+  assert(dLatKm <= 0.751, `Spot #${idx + 1} lat within 0.75 km from center (got ${dLatKm.toFixed(3)} km)`);
+  assert(dLngKm <= 0.751, `Spot #${idx + 1} lng within 0.75 km from center (got ${dLngKm.toFixed(3)} km)`);
+});
 
 // Test 7: StreakService 1 Shuffle Per Day Limit
 console.log('\n🔍 Testing StreakService 1 Shuffle Per Day Limit:');

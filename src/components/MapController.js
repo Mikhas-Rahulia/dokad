@@ -184,10 +184,11 @@ export class MapController {
     this.clearTourMarkers();
     if (!spots || spots.length === 0) return;
 
-    // Draw route polyline: origin → spot1 → spot2 → spot3
+    // Draw closed loop route: origin → spot1 → spot2 → spot3 → origin (Point 4)
     const routeCoords = [
       [origin.lng, origin.lat],
-      ...spots.map(s => [s.lng, s.lat])
+      ...spots.map(s => [s.lng, s.lat]),
+      [origin.lng, origin.lat]
     ];
 
     const routeSrc = this.map.getSource(this.routeSourceId);

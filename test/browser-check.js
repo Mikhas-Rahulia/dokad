@@ -63,12 +63,20 @@ async function runBrowserCheck() {
   await page.waitForTimeout(600);
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_3_lang_ru.png') });
 
-  console.log('📅 Opening Memories Calendar...');
+  console.log('📅 Opening Memories Calendar Tab...');
   await page.click('#btn-open-calendar');
-  await page.waitForTimeout(800);
-
-  console.log('📸 Screenshot 4: Memories Calendar View...');
+  await page.waitForTimeout(600);
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_4_calendar_memories.png') });
+
+  console.log('🖼️ Switching to Photo Gallery Tab...');
+  await page.click('#tab-btn-gallery');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_5_photo_gallery.png') });
+
+  console.log('🔥 Switching to Streak Stats Tab...');
+  await page.click('#tab-btn-streak');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, 'screen_6_streak_stats.png') });
 
   await page.click('#modal-calendar-close');
   await page.waitForTimeout(500);

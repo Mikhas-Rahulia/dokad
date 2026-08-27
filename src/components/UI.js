@@ -48,6 +48,7 @@ export class AppUI {
     this.radiusTagEl = document.getElementById('radius-tag');
     this.navMemoriesText = document.getElementById('nav-memories-text');
     this.streakCountEl = document.getElementById('streak-count');
+    this.headerStreakBadge = document.getElementById('header-streak-badge');
     this.btnLocateMe = document.getElementById('btn-locate-me');
     this.btnOpenCalendar = document.getElementById('btn-open-calendar');
     this.langSelect = document.getElementById('lang-select');
@@ -95,8 +96,13 @@ export class AppUI {
     // Locate GPS
     this.btnLocateMe.addEventListener('click', () => this.centerOnUser());
 
-    // Open Calendar Memories
-    this.btnOpenCalendar.addEventListener('click', () => this.calendarModal.open());
+    // Open Calendar & Gallery Memories
+    this.btnOpenCalendar.addEventListener('click', () => this.calendarModal.open('calendar'));
+
+    // Open Streak Stats from Header Badge
+    if (this.headerStreakBadge) {
+      this.headerStreakBadge.addEventListener('click', () => this.calendarModal.open('streak'));
+    }
 
     // Generate & Reroll 3 daily spots
     this.btnGenerateDaily.addEventListener('click', () => this.generateDailyTour());

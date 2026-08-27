@@ -1,7 +1,7 @@
 /**
  * Geospatial computations: Ray-casting Point-in-Polygon,
- * strict city boundary sampling of 3 daily spots, TSP optimal route solver,
- * 100m proximity arrival check, and walking navigation URLs.
+ * 1.5 km square boundary sampling, closed-loop TSP optimal route solver (with return to start),
+ * 21m proximity arrival check, and Google Maps walking navigation URLs.
  */
 
 /**
@@ -177,34 +177,34 @@ export function generate3SpotsInCity(geojson, count = 3) {
 }
 
 /**
- * Generates uniformly distributed random points strictly within radiusKm of center.
+ * Generates uniformly distributed random points strictly within a 1.5 km square (1.5 x 1.5 km) centered on (centerLat, centerLng).
  * @param {number} centerLat
  * @param {number} centerLng
- * @param {number} radiusKm (default 2.0 km)
+ * @param {number} sideKm (default 1.5 km)
  * @param {number} count (default 3)
  * @param {number} minDistanceBetweenMeters (default 150m)
  * @returns {Array<{lat: number, lng: number, id: string}>}
  */
-export function generateRandomSpotsInRadius(centerLat, centerLng, radiusKm = 2.0, count = 3, minDistanceBetweenMeters = 150) {
+export function generateRandomSpotsInSquare(centerLat, centerLng, sideKm = 1.5, count = 3, minDistanceBetweenMeters = 150) {
   const spots = [];
-  const maxAttempts = 500;
+  const maxAttempts = 1000;
   let attempts = 0;
+
+  const halfSideKm = sideKm / 2; // 0.75 km from center
+  const dLatMax = halfSideKm / 111.32;
+  const dLngMax = halfSideKm / (111.32 * Math.cos(centerLat * (Math.PI / 180)));
 
   while (spots.length < count && attempts < maxAttempts) {
     attempts++;
-    const r = radiusKm * Math.sqrt(Math.random());
-    const theta = Math.random() * 2 * Math.PI;
-
-    const dLat = (r * Math.cos(theta)) / 111.32;
-    const dLng = (r * Math.sin(theta)) / (111.32 * Math.cos(centerLat * (Math.PI / 180)));
+    const offsetLat = (Math.random() * 2 - 1) * dLatMax;
+    const offsetLng = (Math.random() * 2 - 1) * dLngMax;
 
     const candidate = {
-      lat: Number((centerLat + dLat).toFixed(6)),
-      lng: Number((centerLng + dLng).toFixed(6))
+      lat: Number((centerLat + offsetLat).toFixed(6)),
+      lng: Number((centerLng + offsetLng).toFixed(6))
     };
 
     const distToCenter = calculateHaversineDistance(centerLat, centerLng, candidate.lat, candidate.lng);
-    if (distToCenter > radiusKm) continue;
     if (distToCenter * 1000 < minDistanceBetweenMeters) continue;
 
     const tooClose = spots.some(existing => {
@@ -221,18 +221,23 @@ export function generateRandomSpotsInRadius(centerLat, centerLng, radiusKm = 2.0
   }
 
   while (spots.length < count) {
-    const r = radiusKm * Math.sqrt(Math.random());
-    const theta = Math.random() * 2 * Math.PI;
-    const dLat = (r * Math.cos(theta)) / 111.32;
-    const dLng = (r * Math.sin(theta)) / (111.32 * Math.cos(centerLat * (Math.PI / 180)));
+    const offsetLat = (Math.random() * 2 - 1) * dLatMax;
+    const offsetLng = (Math.random() * 2 - 1) * dLngMax;
     spots.push({
-      lat: Number((centerLat + dLat).toFixed(6)),
-      lng: Number((centerLng + dLng).toFixed(6)),
+      lat: Number((centerLat + offsetLat).toFixed(6)),
+      lng: Number((centerLng + offsetLng).toFixed(6)),
       id: `spot_${spots.length + 1}_${Date.now()}`
     });
   }
 
   return spots;
+}
+
+/**
+ * Backward compatibility alias for circular radius helper
+ */
+export function generateRandomSpotsInRadius(centerLat, centerLng, radiusKm = 1.5, count = 3, minDistanceBetweenMeters = 150) {
+  return generateRandomSpotsInSquare(centerLat, centerLng, radiusKm, count, minDistanceBetweenMeters);
 }
 
 /**
@@ -258,7 +263,8 @@ export function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Solves Traveling Salesperson shortest path starting from origin and visiting all 3 spots.
+ * Solves Traveling Salesperson shortest path starting from origin, visiting all 3 spots,
+ * AND returning back to origin (Point 4 - Closed Loop).
  * @param {{lat: number, lng: number}} origin
  * @param {Array<{lat: number, lng: number}>} spots (array of 3 points)
  * @returns {{orderedSpots: Array<Object>, totalDistanceKm: number, legs: Array<number>}}
@@ -270,7 +276,7 @@ export function solveOptimalRoute(origin, spots) {
 
   if (spots.length === 1) {
     const dist = calculateHaversineDistance(origin.lat, origin.lng, spots[0].lat, spots[0].lng);
-    return { orderedSpots: [{ ...spots[0], step: 1 }], totalDistanceKm: dist, legs: [dist] };
+    return { orderedSpots: [{ ...spots[0], step: 1 }], totalDistanceKm: dist * 2, legs: [dist, dist] };
   }
 
   const permutations = [
@@ -294,12 +300,13 @@ export function solveOptimalRoute(origin, spots) {
     const leg0 = calculateHaversineDistance(origin.lat, origin.lng, p0.lat, p0.lng);
     const leg1 = calculateHaversineDistance(p0.lat, p0.lng, p1.lat, p1.lng);
     const leg2 = calculateHaversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
-    const total = leg0 + leg1 + leg2;
+    const leg3 = calculateHaversineDistance(p2.lat, p2.lng, origin.lat, origin.lng); // Return to start (Point 4)
+    const total = leg0 + leg1 + leg2 + leg3;
 
-    if (total < minTotalDistance) {
+    if (total < minTotalDistance - 1e-6 || (Math.abs(total - minTotalDistance) < 1e-6 && leg0 < bestLegs[0])) {
       minTotalDistance = total;
       bestPermutation = perm;
-      bestLegs = [leg0, leg1, leg2];
+      bestLegs = [leg0, leg1, leg2, leg3];
     }
   }
 
@@ -369,7 +376,8 @@ export function formatDistance(distKm, lang = 'ru') {
 }
 
 /**
- * Builds Google Maps walking route URL for multi-stop navigation.
+ * Builds Google Maps walking route URL for multi-stop navigation
+ * including the final return to the starting origin (Point 4 - Closed Loop).
  * @param {{lat: number, lng: number}} origin
  * @param {Array<{lat: number, lng: number}>} orderedSpots (3 spots in optimal order)
  * @returns {string}
@@ -378,17 +386,10 @@ export function getGoogleMapsOptimalRouteUrl(origin, orderedSpots) {
   if (!orderedSpots || orderedSpots.length === 0) return '#';
 
   const origStr = `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`;
+  // Destination is the origin (Point 4 = final return to start)
+  const destStr = origStr;
 
-  if (orderedSpots.length === 1) {
-    const destStr = `${orderedSpots[0].lat.toFixed(6)},${orderedSpots[0].lng.toFixed(6)}`;
-    return `https://www.google.com/maps/dir/?api=1&origin=${origStr}&destination=${destStr}&travelmode=walking`;
-  }
-
-  const destination = orderedSpots[orderedSpots.length - 1];
-  const destStr = `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`;
-
-  const waypoints = orderedSpots.slice(0, orderedSpots.length - 1);
-  const waypointsStr = waypoints
+  const waypointsStr = orderedSpots
     .map(sp => `${sp.lat.toFixed(6)},${sp.lng.toFixed(6)}`)
     .join('%7C');
 
